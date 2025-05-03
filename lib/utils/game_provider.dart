@@ -142,15 +142,15 @@ class GameProvider extends ChangeNotifier {
     switch (_difficulty) {
       case 'easy':
         molesToShow = 1;
-        moleStayDuration = 1600; // 1.5 saniye
+        moleStayDuration = 1550; // 1.5 saniye
         break;
       case 'normal':
         molesToShow = Random().nextInt(2) + 1; // 1-2 arası
-        moleStayDuration = 1400; // 1.2 saniye
+        moleStayDuration = 1350; // 1.2 saniye
         break;
       case 'hard':
         molesToShow = Random().nextInt(3) + 1; // 1-3 arası
-        moleStayDuration = 1300; // 0.8 saniye
+        moleStayDuration = 1250; // 0.8 saniye
         break;
       default:
         molesToShow = 1;
