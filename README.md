@@ -1,7 +1,7 @@
 # Garden Keeper 🌱🛡️
 
 <div align="center">
-  <img src="screenshots/logo_banner.png" alt="Garden Keeper Logo" width="500"/>
+  <img src="https://github.com/user-attachments/assets/c60954bd-af50-4cd9-8bd4-1a3b27c4b914" alt="Garden Keeper Logo" width="500"/>
   <br>
   <h3>🐹 Bahçenizi İstilacı Köstebeklerden Koruyun! 🌻</h3>
   <p>
@@ -25,7 +25,7 @@
 **Garden Keeper**, bahçenize zarar vermeye çalışan köstebeklere karşı mücadele ettiğiniz eğlenceli bir refleks oyunudur. Toprak altından yüzeye çıkan köstebekleri hızlıca vurun, yüksek puan kazanın ve en iyi bahçe koruyucusu olun!
 
 <div align="center">
-  <img src="screenshots/gameplay_preview.png" alt="Gameplay Preview" width="300"/>
+  <img src="https://github.com/user-attachments/assets/6a77ba69-e4be-40f2-88bb-b665ad7c0591" alt="Gameplay Preview" width="300"/>
 </div>
 
 <a name="ozellikler"></a>
@@ -59,10 +59,10 @@ Gelecek güncellemelerde aşağıdaki özellikleri eklemeyi planlıyoruz:
 <div align="center">
   <table>
     <tr>
-      <td><img src="screenshots/home_screen.png" alt="Ana Ekran" width="200"/></td>
-      <td><img src="screenshots/game_screen.png" alt="Oyun Ekranı" width="200"/></td>
-      <td><img src="screenshots/gameover_screen.png" alt="Oyun Sonu Ekranı" width="200"/></td>
-      <td><img src="screenshots/settings_screen.png" alt="Ayarlar Ekranı" width="200"/></td>
+      <td><img src="https://github.com/user-attachments/assets/83b7319f-9e45-431c-a05a-4ca69b28068b" alt="Ana Ekran" width="200"/></td>
+      <td><img src="https://github.com/user-attachments/assets/eec67b03-e760-434b-bd28-105c6605e3b7" alt="Oyun Ekranı" width="200"/></td>
+      <td><img src="https://github.com/user-attachments/assets/2d543bdf-0d64-43b1-9dba-da3d5ca7b0b5" alt="Oyun Sonu Ekranı" width="200"/></td>
+      <td><img src="https://github.com/user-attachments/assets/ba904e16-cc8a-4074-95e5-39e87fcbbbf8" alt="Ayarlar Ekranı" width="200"/></td>
     </tr>
     <tr>
       <td align="center"><strong>Ana Ekran</strong></td>
@@ -160,8 +160,8 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 
 Sorularınız veya önerileriniz için:
 
-- E-posta: your.email@example.com
-- GitHub: [YourGitHubProfile](https://github.com/yourusername)
+- E-posta: kaaanyildz@gmail.com
+- GitHub: [MyGithubProfile](https://github.com/Kaaanyildiz)
 
 ---
 
