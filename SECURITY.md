@@ -15,7 +15,7 @@ Garden Keeper projesinde bir güvenlik açığı bulduysanız, lütfen aşağıd
 
 1. **Açığı hemen public olarak açıklamayın**
 2. Güvenlik açığıyla ilgili detayları, nasıl keşfedildiğini ve eğer mümkünse bir düzeltme önerisi içeren bir e-posta gönderin: 
-   - E-posta: your.email@example.com
+   - E-posta: kaaanyildz@gmail.com
    - Konu satırında "[Garden Keeper Güvenlik]" ibaresini kullanın
 
 ## Güvenlik Açığı İnceleme Süreci
