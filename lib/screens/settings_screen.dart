@@ -296,7 +296,7 @@ class SettingsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: color.shade800.withAlpha(128),
+              color: color.shade800.withValues(alpha: 128),
               spreadRadius: 1,
               blurRadius: 4,
               offset: const Offset(0, 2),

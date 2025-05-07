@@ -9,11 +9,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../utils/game_provider.dart';
 
 class MoleHole extends StatefulWidget {
   final int index;
   final bool isVisible;
   final bool isHit;
+  final MoleType moleType; // Yeni eklenen köstebek türü
   final VoidCallback onTap;
 
   const MoleHole({
@@ -21,6 +23,7 @@ class MoleHole extends StatefulWidget {
     required this.index,
     required this.isVisible,
     required this.isHit,
+    this.moleType = MoleType.normal, // Varsayılan olarak normal köstebek
     required this.onTap,
   });
 
@@ -100,15 +103,12 @@ class _MoleHoleState extends State<MoleHole> {
                     right: 0,
                     child: SizedBox(
                       height: moleSize,
-                      child: Image.asset(
-                        widget.isHit ? 'assets/images/mole_hit.png' : 'assets/images/mole_normal.png',
-                        fit: BoxFit.contain,
-                      ).animate(
+                      child: _buildMoleImage().animate(
                         onPlay: (controller) => controller.repeat(),
                       )
                       .then(delay: 300.ms)
                       .shake(
-                        hz: 4,
+                        hz: _getMoleAnimationSpeed(),
                         curve: Curves.easeInOutCubic,
                       ),
                     ),
@@ -128,6 +128,44 @@ class _MoleHoleState extends State<MoleHole> {
                     )
                     .then()
                     .fadeOut(duration: 300.ms),
+                    
+                // Altın köstebek efekti
+                if (widget.isVisible && widget.moleType == MoleType.golden && !widget.isHit)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size * 0.2),
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.yellow.withOpacity(0.3),
+                            Colors.amber.withOpacity(0.1),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.4, 0.6, 1.0],
+                        ),
+                      ),
+                    ),
+                  ).animate(
+                    onPlay: (controller) => controller.repeat(),
+                  )
+                  .shimmer(
+                    duration: 1.seconds,
+                    color: Colors.amber.shade300.withOpacity(0.7),
+                  ),
+                
+                // Dayanıklı köstebek efekti - çift halka
+                if (widget.isVisible && widget.moleType == MoleType.tough && !widget.isHit)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size * 0.2),
+                        border: Border.all(
+                          color: Colors.red.shade800.withOpacity(0.7),
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                  ),
                     
                 // Çekiç animasyonu
                 if (_showHammer)
@@ -153,5 +191,80 @@ class _MoleHoleState extends State<MoleHole> {
         );
       }
     );
+  }
+  
+  // Köstebek türüne göre doğru resmi döndür
+  Widget _buildMoleImage() {
+    if (widget.isHit) {
+      return Image.asset(
+        'assets/images/mole_hit.png',
+        fit: BoxFit.contain,
+      );
+    }
+    
+    // Köstebek türüne göre resim seç
+    switch (widget.moleType) {
+      case MoleType.golden:
+        return ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            1.2, 0.0, 0.0, 0.0, 35.0, // Kırmızı
+            0.0, 1.2, 0.0, 0.0, 25.0, // Yeşil
+            0.0, 0.0, 0.8, 0.0, 0.0,  // Mavi
+            0.0, 0.0, 0.0, 1.0, 0.0,  // Alfa
+          ]),
+          child: Image.asset(
+            'assets/images/mole_normal.png',
+            fit: BoxFit.contain,
+          ),
+        );
+      
+      case MoleType.speedy:
+        return ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            1.0, 0.0, 0.0, 0.0, 0.0,  // Kırmızı
+            0.0, 1.0, 0.0, 0.0, 0.0,  // Yeşil
+            0.0, 0.0, 1.2, 0.0, 35.0, // Mavi
+            0.0, 0.0, 0.0, 1.0, 0.0,  // Alfa
+          ]),
+          child: Image.asset(
+            'assets/images/mole_normal.png',
+            fit: BoxFit.contain,
+          ),
+        );
+      
+      case MoleType.tough:
+        return ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            1.3, 0.0, 0.0, 0.0, 30.0, // Kırmızı - daha kızıl
+            0.0, 0.8, 0.0, 0.0, 0.0,  // Yeşil - azalt
+            0.0, 0.0, 0.8, 0.0, 0.0,  // Mavi - azalt
+            0.0, 0.0, 0.0, 1.0, 0.0,  // Alfa
+          ]),
+          child: Image.asset(
+            'assets/images/mole_normal.png',
+            fit: BoxFit.contain,
+          ),
+        );
+      
+      case MoleType.normal:
+        return Image.asset(
+          'assets/images/mole_normal.png',
+          fit: BoxFit.contain,
+        );
+    }
+  }
+  
+  // Köstebek türüne göre animasyon hızını ayarla
+  double _getMoleAnimationSpeed() {
+    switch (widget.moleType) {
+      case MoleType.speedy:
+        return 8; // Daha hızlı
+      case MoleType.golden:
+        return 5;
+      case MoleType.tough:
+        return 3; // Daha yavaş
+      case MoleType.normal:
+        return 4;
+    }
   }
 }

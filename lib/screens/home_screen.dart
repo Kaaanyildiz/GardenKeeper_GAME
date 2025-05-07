@@ -8,9 +8,9 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../utils/game_provider.dart';
+import 'mode_selection_screen.dart'; // Yeni eklenen ekran
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -52,60 +52,40 @@ class HomeScreen extends StatelessWidget {
                     padding: EdgeInsets.only(
                       left: maxWidth * 0.08,
                       right: maxWidth * 0.08,
-                      bottom: maxHeight * 0.08, // Alt kısımdaki boşluğu artır
+                      bottom: maxHeight * 0.04, // Alt kısımdaki boşluğu azalttım
                     ),
                     child: Column(
                       children: [
                         // Üst boşluk - daha az boşluk
-                        SizedBox(height: maxHeight * 0.02),
+                        SizedBox(height: maxHeight * 0.01), // 0.02'den 0.01'e düşürdüm
                         
-                        // Oyun Logosu - Daha büyük boyut
+                        // Oyun Logosu - Daha küçük boyut
                         SizedBox(
-                          width: maxWidth * 0.8, // 0.7'den 0.8'e artırıldı
-                          height: maxHeight * 0.25, // 0.2'den 0.25'e artırıldı
+                          width: maxWidth * 0.8, 
+                          height: maxHeight * 0.20, // 0.25'ten 0.20'ye düşürdüm
                           child: Image.asset(
                             'assets/images/logo.png',
                             fit: BoxFit.contain,
-                          ).animate()
-                            .fade(duration: 300.ms)
-                            .scale(delay: 300.ms),
+                          ),
                         ),
                         
                         // Daha az boşluk
-                        SizedBox(height: maxHeight * 0.02), // 0.04'den 0.02'ye düşürüldü
+                        SizedBox(height: maxHeight * 0.01), // 0.02'den 0.01'e düşürdüm
                         
                         // Köstebek animasyonu - biraz daha küçük
                         Container(
-                          width: maxWidth * 0.25, // 0.3'den 0.25'e düşürüldü
-                          height: maxHeight * 0.12, // 0.15'den 0.12'ye düşürüldü
+                          width: maxWidth * 0.20, // 0.25'ten 0.20'ye düşürdüm
+                          height: maxHeight * 0.09, // 0.12'den 0.09'a düşürdüm
                           decoration: const BoxDecoration(
                             color: Colors.transparent,
                           ),
                           child: Image.asset(
                             'assets/images/mole_normal.png',
                             fit: BoxFit.contain,
-                          ).animate(
-                            onPlay: (controller) => controller.repeat(),
-                          )
-                            .fade(duration: 500.ms)
-                            .scale(delay: 300.ms)
-                            .then()
-                            .moveY(
-                              begin: 0,
-                              end: 20,
-                              duration: 700.ms,
-                              curve: Curves.easeInOut,
-                            )
-                            .then()
-                            .moveY(
-                              begin: 20,
-                              end: 0,
-                              duration: 700.ms,
-                              curve: Curves.easeInOut,
-                            ),
+                          ),
                         ),
                         
-                        SizedBox(height: maxHeight * 0.04),
+                        SizedBox(height: maxHeight * 0.02), // 0.04'ten 0.02'ye düşürdüm
                         
                         // Yüksek skoru göster
                         Container(
@@ -114,128 +94,104 @@ class HomeScreen extends StatelessWidget {
                             vertical: maxHeight * 0.01,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.brown.shade700.withAlpha(180),
+                            color: Colors.brown.shade700.withOpacity(0.7),
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Text(
                             'YÜKSEK SKOR: ${gameProvider.highScore}',
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 18 : 22,
+                              fontSize: isSmallScreen ? 16 : 20, // 18/22'den 16/20'ye düşürdüm
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                        ).animate()
-                          .fade(duration: 500.ms, delay: 400.ms),
-                        
-                        // Geriye kalan alanı doldurmak için spacer
-                        const Spacer(),
-                        
-                        // Butonlar - ekran boyutuna göre ölçeklenecek şekilde, maksimum boyut sınırlaması ile
-                        Padding(
-                          padding: EdgeInsets.only(bottom: maxHeight * 0.02),
-                          child: Column(
+                        ),
+                          
+                        // Günlük Görev göstergesi
+                        Container(
+                          margin: const EdgeInsets.only(top: 8), // 10'dan 8'e düşürdüm
+                          padding: EdgeInsets.symmetric(
+                            horizontal: maxWidth * 0.05,
+                            vertical: maxHeight * 0.008, // 0.01'den 0.008'e düşürdüm
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade700.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.green.shade900, width: 2),
+                          ),
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Başlat butonu - maksimum genişlik sınırlaması ile
+                              Icon(Icons.calendar_today, color: Colors.white, size: isSmallScreen ? 16 : 20), // 18/22'den 16/20'ye düşürdüm
+                              const SizedBox(width: 8),
+                              Text(
+                                'GÜNLÜK GÖREV HAZIR!',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 12 : 16, // 14/18'den 12/16'ya düşürdüm
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Butonlara daha fazla alan yaratmak için
+                        const SizedBox(height: 20),
+                        
+                        // Butonlar - ekran boyutuna göre ölçeklenecek şekilde
+                        Expanded( // Spacer yerine kalan alana buton alanını yerleştirdim
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center, // Butonları dikey olarak ortala
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Başlat butonu - yeni mod seçimi ekranına yönlendirildi
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.pushNamed(context, '/game');
+                                  Navigator.push(
+                                    context, 
+                                    MaterialPageRoute(
+                                      builder: (context) => const ModeSelectionScreen(),
+                                    )
+                                  );
                                 },
                                 child: SizedBox(
                                   width: buttonWidth,
+                                  height: maxHeight * 0.12, // Oransal yükseklik ekledim
                                   child: Image.asset(
                                     'assets/images/button_play.png',
                                     fit: BoxFit.contain,
                                   ),
                                 ),
-                              ).animate()
-                                .fade(duration: 500.ms, delay: 600.ms)
-                                .slideY(begin: 0.5, end: 0),
+                              ),
                               
-                              SizedBox(height: maxHeight * 0.025),
+                              SizedBox(height: maxHeight * 0.02), // 0.025'ten 0.02'ye düşürdüm
                               
-                              // Ayarlar butonu - Daha belirgin ve tıklanabilir görünüm
-                              Column(
-                                children: [
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.pushNamed(context, '/settings');
-                                    },
-                                    splashColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                    child: Container(
-                                      width: buttonWidth * 0.4,
-                                      padding: EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.brown.shade600.withOpacity(0.8),
-                                        borderRadius: BorderRadius.circular(15),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.3),
-                                            blurRadius: 5,
-                                            spreadRadius: 1,
-                                            offset: Offset(0, 3),
-                                          ),
-                                        ],
-                                        border: Border.all(
-                                          color: Colors.brown.shade800,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          // Buton içeriği - özel efekt ve gölge ile
-                                          Image.asset(
-                                            'assets/images/button_settings.png',
-                                            fit: BoxFit.contain,
-                                          ),
-                                          
-                                          // Hover efekti - tıklanabilir görünüm için
-                                          Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: () {
-                                                Navigator.pushNamed(context, '/settings');
-                                              },
-                                              splashColor: Colors.white.withOpacity(0.2),
-                                              highlightColor: Colors.white.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(15),
-                                              child: Container(
-                                                width: buttonWidth * 0.6,
-                                                height: 60,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  
-                                  // Buton etiketi - daha açıklayıcı
-                                  Padding(
-                                    padding: EdgeInsets.only(top: 8),
-                                    child: Text(
-                                      'AYARLAR',
-                                      style: TextStyle(
-                                        color: Colors.brown.shade800,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: isSmallScreen ? 14 : 20,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.white.withOpacity(0.5),
-                                            blurRadius: 2,
-                                            offset: Offset(0, 1),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ).animate()
-                                .fade(duration: 500.ms, delay: 800.ms)
-                                .slideY(begin: 0.5, end: 0),
+                              // Başarımlar butonu
+                              buildSimpleMenuButton(
+                                context: context,
+                                icon: Icons.emoji_events,
+                                label: 'BAŞARIMLAR',
+                                buttonWidth: buttonWidth * 0.4,
+                                color: Colors.amber.shade800,
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/achievements');
+                                },
+                              ),
+                              
+                              SizedBox(height: maxHeight * 0.015), // 0.02'den 0.015'e düşürdüm
+                              
+                              // Ayarlar butonu
+                              buildSimpleMenuButton(
+                                context: context,
+                                icon: Icons.settings,
+                                label: 'AYARLAR',
+                                buttonWidth: buttonWidth * 0.4,
+                                color: Colors.brown.shade600,
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/settings');
+                                },
+                              ),
                             ],
                           ),
                         ),
@@ -248,6 +204,74 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+  
+  // Basitleştirilmiş menü butonu widget'ı
+  Widget buildSimpleMenuButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required double buttonWidth,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 400;
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min, // Sadece gerektiği kadar yer kaplasın
+      children: [
+        InkWell(
+          onTap: onTap,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          child: Container(
+            width: buttonWidth,
+            padding: const EdgeInsets.all(8), // 10'dan 8'e düşürdüm
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 5,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+              border: Border.all(
+                color: color,
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: isSmallScreen ? 24 : 32, // 28/36'dan 24/32'ye düşürdüm
+            ),
+          ),
+        ),
+        
+        // Buton etiketi
+        Padding(
+          padding: const EdgeInsets.only(top: 4), // 8'den 4'e düşürdüm
+          child: Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: isSmallScreen ? 12 : 16, // 14/18'den 12/16'ya düşürdüm
+              shadows: [
+                Shadow(
+                  color: Colors.white.withOpacity(0.5),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

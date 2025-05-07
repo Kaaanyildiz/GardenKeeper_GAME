@@ -7,6 +7,7 @@
   <p>
     <a href="#oyun-hakkinda"><strong>Oyun Hakkında</strong></a> •
     <a href="#ozellikler"><strong>Özellikler</strong></a> •
+    <a href="#oyun-modlari"><strong>Oyun Modları</strong></a> •
     <a href="#kurulum"><strong>Kurulum</strong></a> •
     <a href="#nasil-oynanir"><strong>Nasıl Oynanır</strong></a> •
     <a href="#teknik-detaylar"><strong>Teknik Detaylar</strong></a>
@@ -15,7 +16,7 @@
     <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-brightgreen" alt="Platform">
     <img src="https://img.shields.io/badge/Flutter-3.0+-blue" alt="Flutter">
     <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
-    <img src="https://img.shields.io/badge/Version-1.0.0-orange" alt="Version">
+    <img src="https://img.shields.io/badge/Version-1.2.0-orange" alt="Version">
   </p>
 </div>
 
@@ -40,6 +41,8 @@
 - 🔊 **Ses Ayarları**: Oyun müziği ve ses efektlerini açıp kapatabilme
 - 🏆 **Yüksek Skor Takibi**: En iyi skorunuzu kaydedin ve kırmaya çalışın
 - 📱 **Duyarlı Tasarım**: Farklı ekran boyutlarına otomatik uyum
+- 🔨 **Güçlendiriciler**: Oyun sırasında rastgele ortaya çıkan özel güçlendiriciler
+- 🏅 **Başarımlar Sistemi**: Özel hedefleri tamamlayarak başarım kazanın
 
 <a name="planlanan-ozellikler"></a>
 ## 🚀 Planlanan Özellikler

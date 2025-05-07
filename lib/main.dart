@@ -13,6 +13,8 @@ import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/game_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/achievements_screen.dart'; // Yeni eklendi
+import 'screens/mode_selection_screen.dart'; // Yeni eklendi
 import 'utils/game_provider.dart';
 
 void main() {
@@ -58,6 +60,8 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/game': (context) => const GameScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/achievements': (context) => const AchievementsScreen(), // Yeni eklendi
+        '/mode_selection': (context) => const ModeSelectionScreen(), // Yeni eklendi
       },
     );
   }
