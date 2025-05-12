@@ -1,15 +1,7 @@
-/*
- * Copyright © 2025 Mehmet Kaan YILDIZ
- * Garden Keeper - Köstebek vurma oyunu
- * Tüm hakları saklıdır.
- * 
- * Bu yazılım, MIT Lisansı altında lisanslanmıştır.
- * Lisans bilgisi için LICENSE dosyasını inceleyiniz.
- */
-
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'audio_manager.dart';
 
@@ -26,7 +18,8 @@ enum MoleType {
   normal,     // Normal köstebek
   golden,     // Altın köstebek (ekstra puan)
   speedy,     // Hızlı köstebek (daha az görünme süresi)
-  tough       // Dayanıklı köstebek (2 vuruş gerektirir)
+  tough,      // Dayanıklı köstebek (2 vuruş gerektirir)
+  healing     // İyileştirici köstebek (Hayatta Kalma modunda can ekler)
 }
 
 // Güçlendirme türleri için enum
@@ -34,6 +27,64 @@ enum PowerUpType {
   hammer,     // Çekiç güçlendirmesi (sonraki vuruşta ekstra puan)
   timeFreezer, // Zaman dondurucu (süreyi kısa bir süre durdurur)
   moleReveal  // Köstebek gösterici (tüm köstebekleri kısa süre gösterir)
+}
+
+// Görev türleri için enum
+enum TaskType {
+  hitMoles,      // Köstebek vurma görevi
+  hitGoldenMoles, // Altın köstebek vurma görevi
+  reachScore,    // Belirli bir puana ulaşma görevi
+  playTimeInMode // Belirli bir modda belirli süre geçirme görevi
+}
+
+// Mesaj türleri için enum
+enum MessageType {
+  info,
+  success,
+  warning,
+  error,
+}
+
+// Oyun içi mesajları temsil eden sınıf
+class GameMessage {
+  final String text;
+  final DateTime timestamp;
+  final MessageType type;
+  
+  GameMessage({
+    required this.text, 
+    required this.timestamp,
+    this.type = MessageType.info,
+  });
+}
+
+// Köstebek kontrolü için yapılar
+class Mole {
+  final MoleType type;
+  int health;
+  
+  Mole({required this.type, this.health = 1});
+}
+
+// Günlük görevler için yapı
+class DailyTask {
+  final String id;
+  final String title;
+  final String description;
+  final int requiredCount;
+  final int rewardPoints;
+  final TaskType type;
+  final GameMode? gameMode; // Opsiyonel: Sadece belirli bir mod için geçerli görevler için
+
+  DailyTask({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.requiredCount,
+    required this.rewardPoints,
+    required this.type,
+    this.gameMode,
+  });
 }
 
 class GameProvider extends ChangeNotifier {
@@ -52,10 +103,17 @@ class GameProvider extends ChangeNotifier {
   
   // Oyun zorluğu
   String _difficulty = 'normal'; // easy, normal, hard
+  int get _difficultyLevel => _difficulty == 'easy' ? 1 : (_difficulty == 'normal' ? 2 : 3);
   
   // Ses ayarları
   bool _soundEnabled = true;
   bool _musicEnabled = true;
+  
+  // Köstebek kontrolü için değişkenler
+  final Random _random = Random();
+  
+  // Maksimum can sayısı
+  final int _maxLives = 5;
   
   // Yeni eklenen özellikler
   GameMode _currentGameMode = GameMode.classic;
@@ -73,10 +131,17 @@ class GameProvider extends ChangeNotifier {
   final List<MoleType> _moleTypes = List.generate(9, (_) => MoleType.normal);
   final List<int> _moleHealth = List.generate(9, (_) => 1); // Dayanıklı köstebekler için sağlık
   
+  // Aktif güçlendirmeler listesi
+  final List<PowerUpType> _activeBoosts = [];
+  
   // Güçlendirme sistemi değişkenleri
   PowerUpType? _activePowerUp;
   bool _powerUpActive = false;
   int _powerUpDuration = 0;
+  
+  // Ekranda bekleyen güçlendirme için değişkenler
+  int _pendingPowerUpIndex = -1;
+  PowerUpType? _pendingPowerUpType;
   
   // Başarılar sistemi
   final Map<String, bool> _achievements = {
@@ -87,6 +152,49 @@ class GameProvider extends ChangeNotifier {
     'all_modes': false,       // Tüm modları oyna
     'survival_master': false, // Hayatta kalma modunda 2 dakika
   };
+  
+  // Günlük görevler için değişkenler
+  final Map<String, DailyTask> _dailyTasks = {
+    'hit_10_moles': DailyTask(
+      id: 'hit_10_moles',
+      title: '10 Köstebek Vur',
+      description: 'Bugün 10 köstebek vur',
+      requiredCount: 10,
+      rewardPoints: 20,
+      type: TaskType.hitMoles,
+    ),
+    'hit_5_golden': DailyTask(
+      id: 'hit_5_golden',
+      title: '5 Altın Köstebek Vur',
+      description: 'Bugün 5 altın köstebek vur',
+      requiredCount: 5,
+      rewardPoints: 50,
+      type: TaskType.hitGoldenMoles,
+    ),
+    'score_300': DailyTask(
+      id: 'score_300',
+      title: '300 Puan Topla',
+      description: 'Tek oyunda 300 puan topla',
+      requiredCount: 300,
+      rewardPoints: 40,
+      type: TaskType.reachScore,
+    ),
+    'play_survival': DailyTask(
+      id: 'play_survival',
+      title: 'Hayatta Kalma Modu Oyna',
+      description: 'Hayatta kalma modunda 1 dakika geçir',
+      requiredCount: 60, // 60 saniye
+      rewardPoints: 30,
+      type: TaskType.playTimeInMode,
+      gameMode: GameMode.survival,
+    ),
+  };
+  
+  // Günlük görev ilerlemeleri
+  final Map<String, int> _taskProgresses = {};
+  
+  // Kullanıcının günlük puanı
+  int _dailyPoints = 0;
   
   // Getter'lar - Mevcut olanlar
   int get score => _score;
@@ -109,6 +217,8 @@ class GameProvider extends ChangeNotifier {
   List<MoleType> get moleTypes => _moleTypes;
   Map<GameMode, int> get highScores => _highScores;
   int get powerUpDuration => _powerUpDuration;
+  int get pendingPowerUpIndex => _pendingPowerUpIndex;
+  PowerUpType? get pendingPowerUpType => _pendingPowerUpType;
   
   // Achievements screen için eklenen getter'lar
   List<String> get unlockedAchievements => _achievements.entries
@@ -126,6 +236,17 @@ class GameProvider extends ChangeNotifier {
   int get totalGamesPlayed => _totalGamesPlayed;
   int get totalMolesHit => _totalMolesHit;
   int get highestScore => _highestScore;
+  
+  // Getter'lar
+  Map<String, DailyTask> get dailyTasks => _dailyTasks;
+  Map<String, int> get taskProgresses => _taskProgresses;
+  int get dailyPoints => _dailyPoints;
+  
+  // Aktif günlük görevleri getir
+  List<DailyTask> get activeDailyTasks => _dailyTasks.values.toList();
+  
+  // En son güncelleme tarihi
+  DateTime? _lastDailyTaskUpdate;
   
   GameProvider() {
     _loadData();
@@ -151,6 +272,11 @@ class GameProvider extends ChangeNotifier {
     // Başarıları yükle
     for (var key in _achievements.keys) {
       _achievements[key] = prefs.getBool('achievement_$key') ?? false;
+    }
+    
+    // Günlük görev ilerlemelerini yükle
+    for (var taskId in _dailyTasks.keys) {
+      _taskProgresses[taskId] = prefs.getInt('task_$taskId') ?? 0;
     }
     
     // Ses ayarlarını güncelle
@@ -179,6 +305,11 @@ class GameProvider extends ChangeNotifier {
     // Başarıları kaydet
     for (var key in _achievements.keys) {
       await prefs.setBool('achievement_$key', _achievements[key] ?? false);
+    }
+    
+    // Günlük görev ilerlemelerini kaydet
+    for (var taskId in _taskProgresses.keys) {
+      await prefs.setInt('task_$taskId', _taskProgresses[taskId] ?? 0);
     }
   }
   
@@ -235,7 +366,7 @@ class GameProvider extends ChangeNotifier {
         break;
       case GameMode.survival:
         _lives = 3;     // Hayatta kalma modunda yaşam sistemi
-        _timeLeft = 999; // Süresiz
+        _timeLeft = 0;  // Başlangıçta 0'dan başlat (yukarı doğru sayacak)
         break;
       case GameMode.special:
         _timeLeft = 60;
@@ -272,6 +403,16 @@ class GameProvider extends ChangeNotifier {
         // Zamana karşı modunda, vuruşlar zamanı artırır
         if (_currentGameMode != GameMode.survival) {
           _timeLeft--;
+        } else {
+          // Hayatta kalma modunda süreyi ilerlet ve başarım kontrolü yap
+          _timeLeft++;
+          
+          // 2 dakika (120 saniye) hayatta kalma başarımı kontrolü
+          if (_timeLeft >= 120 && !_achievements['survival_master']!) {
+            _achievements['survival_master'] = true;
+            _showMessage("Başarım: Bahçenin Efendisi!");
+            _saveData();
+          }
         }
       }
       
@@ -294,6 +435,13 @@ class GameProvider extends ChangeNotifier {
       }
       
       notifyListeners();
+    });
+    
+    // İlk köstebekleri göster - oyunun hemen başlaması için
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (_isGameActive) {
+        _showRandomEntities();
+      }
     });
     
     notifyListeners();
@@ -364,13 +512,21 @@ class GameProvider extends ChangeNotifier {
         } else if (roll < 0.30) {
           _moleTypes[index] = MoleType.speedy; // %15 hızlı köstebek
         } else if (roll < 0.40) {
-          _moleTypes[index] = MoleType.tough;  // %10 dayanıklı köstebek
-          _moleHealth[index] = 2;
+          _moleTypes[index] = MoleType.tough; // %10 dayanıklı köstebek
+          _moleHealth[index] = 2; // Dayanıklı köstebekler 2 vuruş gerektirir
+        } else if (_currentGameMode == GameMode.survival && roll < 0.45) {
+          _moleTypes[index] = MoleType.healing; // %5 iyileştirici köstebek - sadece Hayatta Kalma modunda
         } else {
-          _moleTypes[index] = MoleType.normal; // %60 normal köstebek
+          _moleTypes[index] = MoleType.normal;
         }
       } else {
+        // Diğer modlar için
         _moleTypes[index] = MoleType.normal;
+        
+        // Hayatta Kalma modunda iyileştirici köstebek şansı
+        if (_currentGameMode == GameMode.survival && random.nextDouble() < 0.15) { // %15 şansa yükseltildi
+          _moleTypes[index] = MoleType.healing;
+        }
       }
     }
     
@@ -396,9 +552,12 @@ class GameProvider extends ChangeNotifier {
             // Hayatta kalma modunda kaçırılan köstebek yaşam azaltır
             if (_currentGameMode == GameMode.survival) {
               _lives--;
+              // Yaşam hakkı kalmadıysa oyunu bitir
               if (_lives <= 0) {
                 endGame();
               }
+              // Yaşam azaldığında mesaj göster ve ses çal
+              _showMessage("Bir canını kaybettin!");
             }
             
             // Iskalandığında ses çal
@@ -420,12 +579,41 @@ class GameProvider extends ChangeNotifier {
       index = random.nextInt(_moleVisible.length);
     }
     
+    // Rastgele bir güçlendirme seç
+    List<PowerUpType> availablePowerUps = [
+      PowerUpType.hammer,
+      PowerUpType.timeFreezer,
+      PowerUpType.moleReveal,
+    ];
+    
+    // Hayatta kalma modunda timeFreezer çalışmayacağı için listeden çıkar
+    if (_currentGameMode == GameMode.survival) {
+      availablePowerUps.remove(PowerUpType.timeFreezer);
+    }
+    
+    PowerUpType randomPowerUp = availablePowerUps[random.nextInt(availablePowerUps.length)];
+    
+    // Güçlendirmeyi aktif et - ekranda gösterirken kullanılacak
+    _moleVisible[index] = true;
+    _moleTypes[index] = MoleType.normal; // Özel bir görsel eklenebilir
+    
+    // Güçlendirme UI'da görünür olması için bir bayrak ekle
+    _pendingPowerUpIndex = index;
+    _pendingPowerUpType = randomPowerUp;
+    
     // Güçlendirmeyi belirli bir süre sonra otomatik kaldır
     Future.delayed(const Duration(milliseconds: 2000), () {
-      if (_isGameActive) {
+      if (_isGameActive && _pendingPowerUpIndex == index) {
+        _pendingPowerUpIndex = -1;
+        _pendingPowerUpType = null;
+        if (_moleVisible[index] && !_moleHit[index]) {
+          _moleVisible[index] = false;
+        }
         notifyListeners();
       }
     });
+    
+    notifyListeners();
   }
   
   // Güçlendirme aktifleştir
@@ -471,92 +659,128 @@ class GameProvider extends ChangeNotifier {
   
   // Köstebeğe vur - farklı köstebek türleri için güncellendi
   void hitMole(int index) {
-    if (_isGameActive && _moleVisible[index] && !_moleHit[index]) {
-      // Dayanıklı köstebek kontrolü
-      if (_moleTypes[index] == MoleType.tough && _moleHealth[index] > 1) {
-        _moleHealth[index]--;
-        _audioManager.playHitSound();
-        notifyListeners();
-        return;
-      }
-      
-      _moleHit[index] = true;
-      
-      // Vurma sesi çal
-      _audioManager.playHitSound();
-      
-      // Köstebek türü ve moda göre puan hesapla
-      int basePoints;
-      switch (_difficulty) {
-        case 'easy':
-          basePoints = 10;
-          break;
-        case 'normal':
-          basePoints = 15;
-          break;
-        case 'hard':
-          basePoints = 25;
-          break;
-        default:
-          basePoints = 15;
-      }
-      
-      // Köstebek türüne göre çarpan
-      double multiplier = 1.0;
-      if (_moleTypes[index] == MoleType.golden) {
-        multiplier = 3.0;  // Altın köstebek 3x puan
-        
-        // Altın köstebek başarımı
+    // Köstebek zaten vurulmuş mu kontrol et
+    if (!_moleVisible[index] || _moleHit[index]) return;
+    
+    // Köstebeği vuruldu olarak işaretle
+    _moleHit[index] = true;
+    
+    // Dayanıklı köstebekler için sağlık kontrolü
+    if (_moleTypes[index] == MoleType.tough && _moleHealth[index] > 1) {
+      _moleHealth[index]--;
+      // Ses efekti ve titreşim
+      _playSound('hit');
+      _vibrate();
+      notifyListeners();
+      return;
+    }
+
+    // Köstebek tipine göre puan hesaplama
+    int pointsToAdd = 0;
+    switch (_moleTypes[index]) {
+      case MoleType.normal:
+        pointsToAdd = 10;
+        // Normal köstebek vurma görevi
+        _updateDailyTaskProgress('hit_10_moles');
+        break;
+      case MoleType.golden:
+        pointsToAdd = 30; // Altın köstebek 3x puan
+        // Altın köstebek vurma görevi
+        _updateDailyTaskProgress('hit_5_golden');
+        // Altın köstebek başarımını kontrol et
         if (!_achievements['golden_mole']!) {
           _achievements['golden_mole'] = true;
           _saveData();
         }
-      } else if (_moleTypes[index] == MoleType.speedy) {
-        multiplier = 2.0;  // Hızlı köstebek 2x puan
-      } else if (_moleTypes[index] == MoleType.tough) {
-        multiplier = 1.5;  // Dayanıklı köstebek 1.5x puan
-      }
-      
-      // Çekiç güçlendirmesi varsa ek puan
-      if (_powerUpActive && _activePowerUp == PowerUpType.hammer) {
-        multiplier += 1.0;  // Çekiç güçlendirmesi +1x puan
-        _powerUpActive = false;
-        _activePowerUp = null;
-      }
-      
-      // Zamana karşı modda her vuruş süreyi uzatır
-      if (_currentGameMode == GameMode.timeAttack) {
-        _timeLeft += 2;  // Her vuruş +2 saniye
-      }
-      
-      // Toplam puanı hesapla ve ekle
-      int points = (basePoints * multiplier).round();
-      _score += points;
-      
-      // Puan başarımlarını kontrol et
-      if (_score >= 100 && !_achievements['score_100']!) {
-        _achievements['score_100'] = true;
-        _saveData();
-      }
-      if (_score >= 500 && !_achievements['score_500']!) {
-        _achievements['score_500'] = true;
-        _saveData();
-      }
-      
-      // Yüksek skoru güncelle
-      if (_score > (_highScores[_currentGameMode] ?? 0)) {
-        _highScores[_currentGameMode] = _score;
-        
-        // Klasik mod için eski yüksek skor değişkenini de güncelle
-        if (_currentGameMode == GameMode.classic && _score > _highScore) {
-          _highScore = _score;
+        break;
+      case MoleType.speedy:
+        pointsToAdd = 20; // Hızlı köstebek 2x puan
+        // Normal köstebek vurma görevi (speedy de köstebek sayılır)
+        _updateDailyTaskProgress('hit_10_moles');
+        break;
+      case MoleType.tough:
+        pointsToAdd = 25; // Dayanıklı köstebek 2.5x puan
+        // Normal köstebek vurma görevi (tough da köstebek sayılır)
+        _updateDailyTaskProgress('hit_10_moles');
+        break;
+      case MoleType.healing:
+        pointsToAdd = 5; // İyileştirici köstebek az puan verir
+        // Normal köstebek vurma görevi (healing de köstebek sayılır)
+        _updateDailyTaskProgress('hit_10_moles');
+        // Hayatta kalma modunda can ekler
+        if (_currentGameMode == GameMode.survival && _lives < _maxLives) {
+          _lives++;
+          _showMessage("Ekstra Can Kazanıldı!");
         }
-        
-        _saveData();
+        break;
+    }
+
+    // Çekiç güçlendirmesi aktifse puanı iki katına çıkar
+    if (_activePowerUp == PowerUpType.hammer && _powerUpActive) {
+      pointsToAdd *= 2;
+      _powerUpActive = false;
+      _activePowerUp = null;
+    }
+
+    // Puanı güncelle
+    _score += pointsToAdd;
+    
+    // Puan toplama görevini güncelle
+    if (_score >= 300) {
+      _updateDailyTaskProgress('score_300', _score);
+    }
+    
+    // Başarımları kontrol et
+    if (_score >= 100 && !_achievements['score_100']!) {
+      _achievements['score_100'] = true;
+      _saveData();
+    } else if (_score >= 500 && !_achievements['score_500']!) {
+      _achievements['score_500'] = true;
+      _saveData();
+    }
+    
+    // Yüksek skoru güncelle
+    if (_score > _highScore && _currentGameMode == GameMode.classic) {
+      _highScore = _score;
+    }
+    
+    // Mod bazlı yüksek skoru güncelle
+    if (_score > (_highScores[_currentGameMode] ?? 0)) {
+      _highScores[_currentGameMode] = _score;
+      _saveData();
+    }
+    
+    _showPointAnimation(index, pointsToAdd);
+
+    // Zaman yarışı modunda her vuruş için zaman ekle
+    if (_currentGameMode == GameMode.timeAttack) {
+      // Köstebek tipine göre farklı süre eklemeleri
+      int timeToAdd;
+      switch (_moleTypes[index]) {
+        case MoleType.golden:
+          timeToAdd = 5; // Altın köstebek 5 saniye ekler
+          break;
+        case MoleType.speedy:
+          timeToAdd = 3; // Hızlı köstebek 3 saniye ekler
+          break;
+        case MoleType.tough:
+          timeToAdd = 4; // Dayanıklı köstebek 4 saniye ekler
+          break;
+        default:
+          timeToAdd = 2; // Normal köstebek 2 saniye ekler
       }
       
-      notifyListeners();
+      _timeLeft += timeToAdd;
+      // Kazanılan zamanı kullanıcıya göster
+      _showMessage("+$timeToAdd saniye!");
     }
+    
+    // Ses efekti ve titreşim
+    _playSound('hit');
+    _vibrate();
+    
+    // Oyun durumunu güncelle
+    notifyListeners();
   }
   
   // Oyunu bitir - güvenli şekilde
@@ -603,7 +827,7 @@ class GameProvider extends ChangeNotifier {
     super.dispose();
   }
   
-  // Başarımları güncellemek için yardımcı metod
+  // Başarıları güncellemek için yardımcı metod
   void checkAchievements() {
     // Tüm modları oyna başarımı
     bool allModesPlayed = true;
@@ -630,5 +854,196 @@ class GameProvider extends ChangeNotifier {
   void completeDailyTask(String taskId) {
     // Günlük görev tamamlama işlemleri
     _saveData();
+  }
+  
+  // Rastgele köstebek tipi seçen fonksiyon
+  MoleType _getRandomMoleType() {
+    // Zorluk seviyesine göre farklı olasılıklar kullan
+    double randomValue = _random.nextDouble();
+    
+    // Hayatta kalma modunda iyileştirici köstebek çıkma olasılığını artır
+    double healingChance = _currentGameMode == GameMode.survival ? 0.08 : 0.03;
+    
+    // Zorluk seviyesi arttıkça, özel köstebeklerin çıkma olasılığı da artar
+    double goldenChance = 0.15 + (_difficultyLevel * 0.03);
+    double speedyChance = 0.15 + (_difficultyLevel * 0.05);
+    double toughChance = 0.10 + (_difficultyLevel * 0.04);
+    
+    if (randomValue < healingChance) {
+      return MoleType.healing;
+    } else if (randomValue < healingChance + goldenChance) {
+      return MoleType.golden;
+    } else if (randomValue < healingChance + goldenChance + speedyChance) {
+      return MoleType.speedy;
+    } else if (randomValue < healingChance + goldenChance + speedyChance + toughChance) {
+      return MoleType.tough;
+    } else {
+      return MoleType.normal;
+    }
+  }
+  
+  // Ses çalma yardımcı metodu
+  void _playSound(String soundType) {
+    if (!_soundEnabled) return;
+    
+    switch (soundType) {
+      case 'hit':
+        _audioManager.playHitSound();
+        break;
+      case 'miss':
+        _audioManager.playMissSound();
+        break;
+      case 'button':
+        _audioManager.playButtonSound();
+        break;
+      default:
+        _audioManager.playHitSound();
+    }
+  }
+  
+  // Titreşim oluşturma metodu
+  void _vibrate() {
+    // Titreşimi aktif et (hafif titreşim)
+    HapticFeedback.mediumImpact();
+  }
+  
+  // Aktif mesajları ve animasyonları depolamak için değişkenler
+  final List<GameMessage> _messages = [];
+  final Map<int, int> _pointAnimations = {}; // index, point değerlerini tutar
+  // Mesaj eklemek için metot
+  void addMessage(String message, {MessageType type = MessageType.info}) {
+    _messages.add(GameMessage(
+      text: message,
+      timestamp: DateTime.now(),
+      type: type,
+    ));
+    
+    // 2 saniye sonra mesajı kaldır (daha hızlı mesaj gösterme)
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if(_messages.isNotEmpty) {
+        _messages.removeAt(0);
+        notifyListeners();
+      }
+    });
+    
+    notifyListeners();
+  }  // Puan animasyonu eklemek için metot
+  void addPointAnimation(int index, int points) {
+    // Önce var olan animasyonu temizle (üst üste binmeyi önle)
+    _pointAnimations.remove(index);
+    // Yeni animasyonu ekle
+    _pointAnimations[index] = points;
+    
+    // 400ms (0.4 saniye) sonra animasyonu kaldır (daha hızlı temizleme)
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (_pointAnimations.containsKey(index)) {
+        _pointAnimations.remove(index);
+        notifyListeners();
+      }
+    });
+    
+    notifyListeners();
+  }
+
+  // Mevcut mesajlara ulaşmak için getter
+  List<GameMessage> get messages => _messages;
+
+  // Puan animasyonlarına ulaşmak için getter
+  Map<int, int> get pointAnimations => _pointAnimations;
+  // Ekranda mesaj gösterme
+  void _showMessage(String message, {MessageType type = MessageType.info}) {
+    // Yeni mesajı ekledikten sonra, 3 saniyeden daha eski mesajları otomatik temizle
+    final now = DateTime.now();
+    _messages.removeWhere((msg) => 
+      now.difference(msg.timestamp).inMilliseconds > 3000);
+      
+    // Yeni mesajı ekle
+    addMessage(message, type: type);
+  }
+  // Puan animasyonu gösterme
+  void _showPointAnimation(int index, int points) {
+    // Hemen göstermeye başla
+    // Her bir köstebek için ayrı bir animasyon göster - diğerlerini etkileme
+    addPointAnimation(index, points);
+  }
+
+  // Günlük görevleri kontrol et ve güncelle
+  void checkDailyTasks() {
+    // Bugünün tarihi
+    final now = DateTime.now();
+    
+    // En son güncelleme tarihi bugün değilse, görevleri sıfırla
+    if (_lastDailyTaskUpdate == null || 
+        !isSameDay(_lastDailyTaskUpdate!, now)) {
+      _resetDailyTasks();
+      _lastDailyTaskUpdate = now;
+    }
+    
+    notifyListeners();
+  }
+  
+  // İki tarihin aynı gün olup olmadığını kontrol et
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+  
+  // Günlük görevleri sıfırla
+  void _resetDailyTasks() {
+    for (var taskId in _dailyTasks.keys) {
+      _taskProgresses[taskId] = 0;
+    }
+    _dailyPoints = 0;
+    _saveData();
+  }
+  
+  // Günlük görev ilerlemesini güncelle
+  void _updateTaskProgress(String taskId, int progress) {
+    // Görev yoksa işlem yapma
+    if (!_dailyTasks.containsKey(taskId)) {
+      return;
+    }
+    
+    // Görev zaten tamamlanmışsa işlem yapma
+    final requiredCount = _dailyTasks[taskId]!.requiredCount;
+    final currentProgress = _taskProgresses[taskId] ?? 0;
+    if (currentProgress >= requiredCount) {
+      return;
+    }
+    
+    // Yeni ilerlemeyi ayarla
+    _taskProgresses[taskId] = progress;
+    
+    // Görev tamamlandıysa ödülü ver
+    if (progress >= requiredCount) {
+      // Görev puanını ekle
+      _dailyPoints += _dailyTasks[taskId]!.rewardPoints;
+      
+      // Başarı mesajı göster
+      _showMessage(
+        "Görev Tamamlandı: ${_dailyTasks[taskId]!.title}! +${_dailyTasks[taskId]!.rewardPoints} puan kazandın!", 
+        type: MessageType.success
+      );
+    }
+    
+    _saveData();
+    notifyListeners();
+  }
+  
+  // Günlük görev ilerlemesini güncelle - kolay kullanım için
+  void _updateDailyTaskProgress(String taskId, [int? value]) {
+    if (!_dailyTasks.containsKey(taskId)) return;
+    
+    int currentProgress = _taskProgresses[taskId] ?? 0;
+    int newProgress;
+    
+    if (value != null) {
+      // Belirli bir değere ayarla (skor gibi)
+      newProgress = value;
+    } else {
+      // Artırarak ilerlet (köstebek vurma gibi)
+      newProgress = currentProgress + 1;
+    }
+    
+    _updateTaskProgress(taskId, newProgress);
   }
 }

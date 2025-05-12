@@ -11,7 +11,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../utils/game_provider.dart';
 
 class GameOverDialog extends StatefulWidget {
   final int score;

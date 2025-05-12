@@ -17,6 +17,8 @@ class MoleHole extends StatefulWidget {
   final bool isHit;
   final MoleType moleType; // Yeni eklenen köstebek türü
   final VoidCallback onTap;
+  final bool isPowerUp; // Güçlendirme mi?
+  final PowerUpType? powerUpType; // Güçlendirme tipi
 
   const MoleHole({
     super.key,
@@ -25,6 +27,8 @@ class MoleHole extends StatefulWidget {
     required this.isHit,
     this.moleType = MoleType.normal, // Varsayılan olarak normal köstebek
     required this.onTap,
+    this.isPowerUp = false, // Varsayılan olarak güçlendirme değil
+    this.powerUpType,
   });
 
   @override
@@ -95,8 +99,30 @@ class _MoleHoleState extends State<MoleHole> {
                   ),
                 ),
                 
+                // Güçlendirme görünümü
+                if (widget.isVisible && widget.isPowerUp && widget.powerUpType != null)
+                  Positioned(
+                    bottom: moleYPosition,
+                    left: 0,
+                    right: 0,
+                    child: SizedBox(
+                      height: moleSize,
+                      child: _buildPowerUpImage(widget.powerUpType!),
+                    ),
+                  ).animate(
+                    onPlay: (controller) => controller.repeat(reverse: true),
+                  )
+                  .fadeIn(duration: 300.ms)
+                  .then()
+                  .moveY(
+                    begin: 5, 
+                    end: -5,
+                    duration: 1.seconds,
+                    curve: Curves.easeInOut
+                  ),
+                
                 // Köstebek (koşullu olarak görünür)
-                if (widget.isVisible)
+                if (widget.isVisible && !widget.isPowerUp)
                   Positioned(
                     bottom: moleYPosition, // Vurulduğunda daha aşağıya iner
                     left: 0,
@@ -192,58 +218,63 @@ class _MoleHoleState extends State<MoleHole> {
       }
     );
   }
-  
-  // Köstebek türüne göre doğru resmi döndür
+    // Köstebek türüne göre doğru resmi döndür
   Widget _buildMoleImage() {
+    // Köstebek türüne göre vurulmuş halleri için doğru görseli döndür
     if (widget.isHit) {
-      return Image.asset(
-        'assets/images/mole_hit.png',
-        fit: BoxFit.contain,
-      );
+      switch (widget.moleType) {
+        case MoleType.golden:
+          return Image.asset(
+            'assets/images/mole_golden_hit.png',
+            fit: BoxFit.contain,
+          );
+        case MoleType.speedy:
+          return Image.asset(
+            'assets/images/mole_speedy_hit.png',
+            fit: BoxFit.contain,
+          );
+        case MoleType.tough:
+          return Image.asset(
+            'assets/images/mole_tough_hit.png',
+            fit: BoxFit.contain,
+          );
+        case MoleType.healing:
+          return Image.asset(
+            'assets/images/mole_healing_hit.png',
+            fit: BoxFit.contain,
+          );
+        case MoleType.normal:
+          return Image.asset(
+            'assets/images/mole_hit.png',
+            fit: BoxFit.contain,
+          );
+      }
     }
     
-    // Köstebek türüne göre resim seç
+    // Köstebek türüne göre normal görselleri döndür
     switch (widget.moleType) {
       case MoleType.golden:
-        return ColorFiltered(
-          colorFilter: const ColorFilter.matrix([
-            1.2, 0.0, 0.0, 0.0, 35.0, // Kırmızı
-            0.0, 1.2, 0.0, 0.0, 25.0, // Yeşil
-            0.0, 0.0, 0.8, 0.0, 0.0,  // Mavi
-            0.0, 0.0, 0.0, 1.0, 0.0,  // Alfa
-          ]),
-          child: Image.asset(
-            'assets/images/mole_normal.png',
-            fit: BoxFit.contain,
-          ),
+        return Image.asset(
+          'assets/images/mole_golden.png',
+          fit: BoxFit.contain,
         );
       
       case MoleType.speedy:
-        return ColorFiltered(
-          colorFilter: const ColorFilter.matrix([
-            1.0, 0.0, 0.0, 0.0, 0.0,  // Kırmızı
-            0.0, 1.0, 0.0, 0.0, 0.0,  // Yeşil
-            0.0, 0.0, 1.2, 0.0, 35.0, // Mavi
-            0.0, 0.0, 0.0, 1.0, 0.0,  // Alfa
-          ]),
-          child: Image.asset(
-            'assets/images/mole_normal.png',
-            fit: BoxFit.contain,
-          ),
+        return Image.asset(
+          'assets/images/mole_speedy.png',
+          fit: BoxFit.contain,
         );
       
       case MoleType.tough:
-        return ColorFiltered(
-          colorFilter: const ColorFilter.matrix([
-            1.3, 0.0, 0.0, 0.0, 30.0, // Kırmızı - daha kızıl
-            0.0, 0.8, 0.0, 0.0, 0.0,  // Yeşil - azalt
-            0.0, 0.0, 0.8, 0.0, 0.0,  // Mavi - azalt
-            0.0, 0.0, 0.0, 1.0, 0.0,  // Alfa
-          ]),
-          child: Image.asset(
-            'assets/images/mole_normal.png',
-            fit: BoxFit.contain,
-          ),
+        return Image.asset(
+          'assets/images/mole_tough.png',
+          fit: BoxFit.contain,
+        );
+      
+      case MoleType.healing:
+        return Image.asset(
+          'assets/images/mole_healing.png',
+          fit: BoxFit.contain,
         );
       
       case MoleType.normal:
@@ -252,6 +283,50 @@ class _MoleHoleState extends State<MoleHole> {
           fit: BoxFit.contain,
         );
     }
+  }
+  
+  // Güçlendirme türüne göre doğru resmi döndür
+  Widget _buildPowerUpImage(PowerUpType powerUpType) {
+    // Kullanılabilecek görseller yok, bu nedenle renkli daireler kullanıyoruz
+    Color powerUpColor;
+    IconData powerUpIcon;
+    
+    switch (powerUpType) {
+      case PowerUpType.hammer:
+        powerUpColor = Colors.amber.shade700;
+        powerUpIcon = Icons.gavel;
+        break;
+      case PowerUpType.timeFreezer:
+        powerUpColor = Colors.cyan.shade700;
+        powerUpIcon = Icons.hourglass_disabled;
+        break;
+      case PowerUpType.moleReveal:
+        powerUpColor = Colors.green.shade700;
+        powerUpIcon = Icons.visibility;
+        break;
+      default:
+        powerUpColor = Colors.purple.shade700;
+        powerUpIcon = Icons.auto_awesome;
+    }
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: powerUpColor.withOpacity(0.9),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: powerUpColor.withOpacity(0.5),
+            spreadRadius: 2,
+            blurRadius: 5,
+          ),
+        ],
+      ),
+      child: Icon(
+        powerUpIcon,
+        color: Colors.white,
+        size: 32,
+      ),
+    );
   }
   
   // Köstebek türüne göre animasyon hızını ayarla
@@ -263,6 +338,8 @@ class _MoleHoleState extends State<MoleHole> {
         return 5;
       case MoleType.tough:
         return 3; // Daha yavaş
+      case MoleType.healing:
+        return 4.5; // İyileştirici köstebek animasyon hızı
       case MoleType.normal:
         return 4;
     }
