@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'dart:math';
 import '../utils/game_provider.dart';
 import '../widgets/mole_hole.dart';
 import '../widgets/game_over_dialog.dart';
@@ -23,7 +24,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin {
+class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // GameProvider referansını sınıf düzeyinde saklayalım
   late GameProvider _gameProvider;
   bool _dialogShowing = false;
@@ -54,6 +55,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     GameMode.survival: 'assets/images/heart.png', // Varsayılan kalp ikonu
     GameMode.special: 'assets/images/star.png',
   };
+
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+  Offset _shakeOffset = Offset.zero;
     @override
   void initState() {
     super.initState();
@@ -77,6 +82,30 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _modeTransitionController.forward();
       }
     });
+
+    _shakeController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _shakeController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _shakeAnimation.addListener(() {
+      if (mounted) {
+        setState(() {
+          // Rastgele yönlerde sarsıntı
+          _shakeOffset = Offset(
+            sin(_shakeAnimation.value * 10) * 5,
+            cos(_shakeAnimation.value * 10) * 5,
+          );
+        });
+      }
+    });
   }
 
   @override
@@ -91,6 +120,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _gameProvider.endGame();
       });
     }
+    _shakeController.dispose();
     super.dispose();
   }
 
@@ -172,6 +202,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  void _triggerShake() {
+    _shakeController.forward(from: 0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final gameProvider = Provider.of<GameProvider>(context);
@@ -206,299 +240,361 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         }
       },
       child: Scaffold(
-        body: Stack(
-          children: [
-            // Ana oyun ekranı
-            Container(
-              decoration: BoxDecoration(
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/background.png'),
-                  fit: BoxFit.cover,
+        body: Transform.translate(
+          offset: _shakeOffset,
+          child: Stack(
+            children: [
+              // Ana oyun ekranı
+              Container(
+                decoration: BoxDecoration(
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/background.png'),
+                    fit: BoxFit.cover,
+                  ),
+                  // Mod rengine göre arka plan renk katmanı eklenir
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      currentOverlayColor.withOpacity(0.2),
+                      currentOverlayColor.withOpacity(0.4),
+                    ],
+                  ),
                 ),
-                // Mod rengine göre arka plan renk katmanı eklenir
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    currentOverlayColor.withOpacity(0.2),
-                    currentOverlayColor.withOpacity(0.4),
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    // Mod Bilgi Bandı (Yeni)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 500),
-                      height: 30,
-                      width: double.infinity,
-                      color: currentModeColor,
-                      child: Center(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _getGameModeIcon(gameProvider.currentGameMode),
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _getGameModeSubtitle(gameProvider.currentGameMode),
-                              style: const TextStyle(
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // Mod Bilgi Bandı (Yeni)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        height: 30,
+                        width: double.infinity,
+                        color: currentModeColor,
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _getGameModeIcon(gameProvider.currentGameMode),
                                 color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _getGameModeSubtitle(gameProvider.currentGameMode),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // Üst bilgi paneli
+                      Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 8.0 : 16.0),
+                        height: size.height * 0.1,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Geri butonu
+                            IconButton(
+                              onPressed: _safeNavigateBack,
+                              icon: Icon(Icons.arrow_back, size: isSmallScreen ? 24 : 30),
+                              color: currentModeColor,
+                            ),
+                            
+                            // Oyun modu başlığı
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 500),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.0, 
+                                vertical: 6.0
+                              ),
+                              decoration: BoxDecoration(
+                                color: currentModeColor.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(50),
+                                    spreadRadius: 1,
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                _getGameModeTitle(gameProvider.currentGameMode),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isSmallScreen ? 14 : 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            
+                            // Zaman veya Can Göstergesi (oyun moduna göre)
+                            _buildGameStatusIndicator(gameProvider, isSmallScreen, size),
+                            
+                            // Skor
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isSmallScreen ? 12 : 20, 
+                                vertical: isSmallScreen ? 6 : 10
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.brown.shade700,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(77),
+                                    spreadRadius: 1,
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/images/star.png',
+                                    width: isSmallScreen ? 18 : 24,
+                                    height: isSmallScreen ? 18 : 24,
+                                  ),
+                                  SizedBox(width: isSmallScreen ? 4 : 8),
+                                  Text(
+                                    '${gameProvider.score}',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: isSmallScreen ? 16 : 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    
-                    // Üst bilgi paneli
-                    Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 8.0 : 16.0),
-                      height: size.height * 0.1,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Geri butonu
-                          IconButton(
-                            onPressed: _safeNavigateBack,
-                            icon: Icon(Icons.arrow_back, size: isSmallScreen ? 24 : 30),
-                            color: currentModeColor,
+                      
+                      // Skor göstergesi
+                      Text(
+                        'Skor: ${gameProvider.score}',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 24 : 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.5),
+                              offset: const Offset(2, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Combo göstergesi
+                      if (gameProvider.currentCombo > 1)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade700.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(2, 2),
+                              ),
+                            ],
                           ),
-                          
-                          // Oyun modu başlığı
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 500),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.0, 
-                              vertical: 6.0
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.local_fire_department,
+                                color: Colors.white,
+                                size: isSmallScreen ? 20 : 24,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${gameProvider.currentCombo}x',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 18 : 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).animate()
+                          .scale(
+                            begin: const Offset(0.8, 0.8),
+                            end: const Offset(1.0, 1.0),
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOutBack,
+                          ),
+                      
+                      // Güçlendirme göstergesi
+                      if (gameProvider.hasPowerUp)
+                        PowerUpWidget(
+                          powerUpName: _getPowerUpName(gameProvider.activePowerUp!),
+                          description: _getPowerUpDescription(gameProvider.activePowerUp!),
+                          icon: _getPowerUpIcon(gameProvider.activePowerUp!),
+                          color: _getPowerUpColor(gameProvider.activePowerUp!),
+                          durationInSeconds: gameProvider.powerUpDuration,
+                        ),
+                      
+                      // Oyun alanı (çimen dokusu ile)
+                      Expanded(
+                        child: AspectRatio(
+                          aspectRatio: 1.0, // Kare oyun alanı
+                          child: Container(
+                            margin: EdgeInsets.symmetric(
+                              vertical: size.height * 0.02, 
+                              horizontal: size.width * 0.03
                             ),
                             decoration: BoxDecoration(
-                              color: currentModeColor.withOpacity(0.8),
+                              image: const DecorationImage(
+                                image: AssetImage('assets/images/grass.png'),
+                                fit: BoxFit.cover,
+                                repeat: ImageRepeat.repeat,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withAlpha(50),
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.black.withAlpha(77),
+                                  spreadRadius: 2,
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
+                              // Mod rengine göre kenarlık
+                              border: Border.all(
+                                color: currentModeColor,
+                                width: 4.0,
+                              ),
                             ),
-                            child: Text(
-                              _getGameModeTitle(gameProvider.currentGameMode),
+                            child: Center(
+                              // Mod animasyonu katmanı
+                              child: Stack(
+                                children: [
+                                  // Köstebekler ve delikler
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return GridView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        padding: EdgeInsets.all(constraints.maxWidth * 0.03),
+                                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 3,
+                                          childAspectRatio: 1.0,
+                                          crossAxisSpacing: 10,
+                                          mainAxisSpacing: 10,
+                                        ),
+                                        itemCount: 9, // 3x3 grid
+                                        itemBuilder: (context, index) {                                        return MoleHole(
+                                            index: index,
+                                            isVisible: gameProvider.moleVisible[index],
+                                            isHit: gameProvider.moleHit[index],
+                                            moleType: gameProvider.moleTypes[index], // Köstebek türü
+                                            onTap: () {
+                                              // Köstebeğe vur
+                                              gameProvider.hitMole(index);
+                                            },
+                                            // Güçlendirme sistemi desteği
+                                            isPowerUp: gameProvider.pendingPowerUpIndex == index,
+                                            powerUpType: gameProvider.pendingPowerUpIndex == index ? 
+                                                        gameProvider.pendingPowerUpType : null,
+                                          );
+                                        },
+                                      );
+                                    }
+                                  ),
+                                  
+                                  // Mod gösterge ikonu (yeni)
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: Image.asset(
+                                      _modeDecorationIcons[gameProvider.currentGameMode] ?? 'assets/images/hammer.png',
+                                      width: 40,
+                                      height: 40,
+                                      opacity: const AlwaysStoppedAnimation<double>(0.5),
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Icon(
+                                          _getGameModeIcon(gameProvider.currentGameMode),
+                                          size: 40,
+                                          color: currentModeColor.withOpacity(0.5),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      // Alt bilgi
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          vertical: size.height * 0.02,
+                          horizontal: size.width * 0.04
+                        ),
+                        decoration: BoxDecoration(
+                          color: currentModeColor,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Zorluk: ${gameProvider.difficulty == 'easy' ? 'Kolay' : gameProvider.difficulty == 'normal' ? 'Normal' : 'Zor'}',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: isSmallScreen ? 14 : 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                          
-                          // Zaman veya Can Göstergesi (oyun moduna göre)
-                          _buildGameStatusIndicator(gameProvider, isSmallScreen, size),
-                          
-                          // Skor
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 12 : 20, 
-                              vertical: isSmallScreen ? 6 : 10
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.brown.shade700,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(77),
-                                  spreadRadius: 1,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
+                            SizedBox(height: isSmallScreen ? 4 : 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Image.asset(
-                                  'assets/images/star.png',
-                                  width: isSmallScreen ? 18 : 24,
-                                  height: isSmallScreen ? 18 : 24,
+                                Icon(
+                                  _getGameModeIcon(gameProvider.currentGameMode),
+                                  color: Colors.white,
+                                  size: isSmallScreen ? 16 : 20,
                                 ),
-                                SizedBox(width: isSmallScreen ? 4 : 8),
+                                SizedBox(width: 6),
                                 Text(
-                                  '${gameProvider.score}',
+                                  _getGameModeDescription(gameProvider.currentGameMode),
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: isSmallScreen ? 16 : 20,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: isSmallScreen ? 12 : 16,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Güçlendirme göstergesi
-                    if (gameProvider.hasPowerUp)
-                      PowerUpWidget(
-                        powerUpName: _getPowerUpName(gameProvider.activePowerUp!),
-                        description: _getPowerUpDescription(gameProvider.activePowerUp!),
-                        icon: _getPowerUpIcon(gameProvider.activePowerUp!),
-                        color: _getPowerUpColor(gameProvider.activePowerUp!),
-                        durationInSeconds: gameProvider.powerUpDuration,
-                      ),
-                    
-                    // Oyun alanı (çimen dokusu ile)
-                    Expanded(
-                      child: AspectRatio(
-                        aspectRatio: 1.0, // Kare oyun alanı
-                        child: Container(
-                          margin: EdgeInsets.symmetric(
-                            vertical: size.height * 0.02, 
-                            horizontal: size.width * 0.03
-                          ),
-                          decoration: BoxDecoration(
-                            image: const DecorationImage(
-                              image: AssetImage('assets/images/grass.png'),
-                              fit: BoxFit.cover,
-                              repeat: ImageRepeat.repeat,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(77),
-                                spreadRadius: 2,
-                                blurRadius: 5,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                            // Mod rengine göre kenarlık
-                            border: Border.all(
-                              color: currentModeColor,
-                              width: 4.0,
-                            ),
-                          ),
-                          child: Center(
-                            // Mod animasyonu katmanı
-                            child: Stack(
-                              children: [
-                                // Köstebekler ve delikler
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    return GridView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      padding: EdgeInsets.all(constraints.maxWidth * 0.03),
-                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 3,
-                                        childAspectRatio: 1.0,
-                                        crossAxisSpacing: 10,
-                                        mainAxisSpacing: 10,
-                                      ),
-                                      itemCount: 9, // 3x3 grid
-                                      itemBuilder: (context, index) {                                        return MoleHole(
-                                          index: index,
-                                          isVisible: gameProvider.moleVisible[index],
-                                          isHit: gameProvider.moleHit[index],
-                                          moleType: gameProvider.moleTypes[index], // Köstebek türü
-                                          onTap: () {
-                                            // Köstebeğe vur
-                                            gameProvider.hitMole(index);
-                                          },
-                                          // Güçlendirme sistemi desteği
-                                          isPowerUp: gameProvider.pendingPowerUpIndex == index,
-                                          powerUpType: gameProvider.pendingPowerUpIndex == index ? 
-                                                      gameProvider.pendingPowerUpType : null,
-                                        );
-                                      },
-                                    );
-                                  }
-                                ),
-                                
-                                // Mod gösterge ikonu (yeni)
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Image.asset(
-                                    _modeDecorationIcons[gameProvider.currentGameMode] ?? 'assets/images/hammer.png',
-                                    width: 40,
-                                    height: 40,
-                                    opacity: const AlwaysStoppedAnimation<double>(0.5),
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        _getGameModeIcon(gameProvider.currentGameMode),
-                                        size: 40,
-                                        color: currentModeColor.withOpacity(0.5),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
                       ),
-                    ),
-                    
-                    // Alt bilgi
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        vertical: size.height * 0.02,
-                        horizontal: size.width * 0.04
-                      ),
-                      decoration: BoxDecoration(
-                        color: currentModeColor,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Zorluk: ${gameProvider.difficulty == 'easy' ? 'Kolay' : gameProvider.difficulty == 'normal' ? 'Normal' : 'Zor'}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isSmallScreen ? 14 : 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: isSmallScreen ? 4 : 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _getGameModeIcon(gameProvider.currentGameMode),
-                                color: Colors.white,
-                                size: isSmallScreen ? 16 : 20,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                _getGameModeDescription(gameProvider.currentGameMode),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: isSmallScreen ? 12 : 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-              // Mesaj overlay'i
-            GameMessagesOverlay(),
-          ],
+                // Mesaj overlay'i
+              GameMessagesOverlay(),
+            ],
+          ),
         ),
       ),
     );

@@ -3,7 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'audio_manager.dart';
+import 'package:flutter/rendering.dart';
 
 // Oyun modları için enum
 enum GameMode {
@@ -196,6 +198,24 @@ class GameProvider extends ChangeNotifier {
   // Kullanıcının günlük puanı
   int _dailyPoints = 0;
   
+  // Combo sistemi için yeni değişkenler
+  int _currentCombo = 0;
+  int _maxCombo = 0;
+  Timer? _comboTimer;
+  static const int _comboTimeout = 2000; // 2 saniye combo süresi
+  
+  // Ses efektleri için yeni değişkenler
+  final Map<MoleType, String> _moleHitSounds = {
+    MoleType.normal: 'audio/hit_normal.mp3',
+    MoleType.golden: 'audio/hit_golden.mp3',
+    MoleType.speedy: 'audio/hit_speedy.mp3',
+    MoleType.tough: 'audio/hit_tough.mp3',
+    MoleType.healing: 'audio/hit_healing.mp3',
+  };
+  
+  // Tek bir kaçırma sesi
+  final String _missSound = 'audio/miss.mp3';
+  
   // Getter'lar - Mevcut olanlar
   int get score => _score;
   int get highScore => _currentGameMode == GameMode.classic ? _highScore : _highScores[_currentGameMode] ?? 0;
@@ -207,6 +227,7 @@ class GameProvider extends ChangeNotifier {
   String get difficulty => _difficulty;
   bool get soundEnabled => _soundEnabled;
   bool get musicEnabled => _musicEnabled;
+  int get currentCombo => _currentCombo;
   
   // Getter'lar - Yeni eklenenler
   GameMode get currentGameMode => _currentGameMode;
@@ -373,8 +394,10 @@ class GameProvider extends ChangeNotifier {
         break;
     }
     
-    // Arkaplan müziğini başlat
-    _audioManager.playBackgroundMusic();
+    // Arkaplan müziğini başlat ve sesi ayarla
+    if (_musicEnabled) {
+      _audioManager.lowerBackgroundMusicVolume(); // Oyun başladığında sesi kıs
+    }
     
     // Tüm köstebekler için false değeri ata
     for (int i = 0; i < _moleVisible.length; i++) {
@@ -623,18 +646,18 @@ class GameProvider extends ChangeNotifier {
     
     switch (type) {
       case PowerUpType.hammer:
-        _powerUpDuration = 3; // 3 saniyelik çekiç güçlendirmesi
+        _powerUpDuration = 3;
         break;
       case PowerUpType.timeFreezer:
-        _powerUpDuration = 5; // 5 saniyelik zaman dondurma
+        _powerUpDuration = 5;
         break;
       case PowerUpType.moleReveal:
-        _powerUpDuration = 3; // 3 saniyelik köstebek gösterme
+        _powerUpDuration = 3;
         _revealAllMoles();
         break;
     }
     
-    _audioManager.playButtonSound(); // Güçlendirme sesi eklenebilir
+    _audioManager.playPowerUpSound();
     notifyListeners();
   }
   
@@ -659,127 +682,84 @@ class GameProvider extends ChangeNotifier {
   
   // Köstebeğe vur - farklı köstebek türleri için güncellendi
   void hitMole(int index) {
-    // Köstebek zaten vurulmuş mu kontrol et
-    if (!_moleVisible[index] || _moleHit[index]) return;
+    if (!_isGameActive || !_moleVisible[index] || _moleHit[index]) return;
     
-    // Köstebeği vuruldu olarak işaretle
     _moleHit[index] = true;
     
-    // Dayanıklı köstebekler için sağlık kontrolü
-    if (_moleTypes[index] == MoleType.tough && _moleHealth[index] > 1) {
-      _moleHealth[index]--;
-      // Ses efekti ve titreşim
-      _playSound('hit');
-      _vibrate();
-      notifyListeners();
-      return;
-    }
-
-    // Köstebek tipine göre puan hesaplama
+    // Combo sistemini güncelle
+    _incrementCombo();
+    
+    // Köstebek tipine göre puan hesaplama ve ses çalma
     int pointsToAdd = 0;
     switch (_moleTypes[index]) {
       case MoleType.normal:
         pointsToAdd = 10;
-        // Normal köstebek vurma görevi
-        _updateDailyTaskProgress('hit_10_moles');
+        _audioManager.playHitSound(MoleType.normal);
         break;
       case MoleType.golden:
-        pointsToAdd = 30; // Altın köstebek 3x puan
-        // Altın köstebek vurma görevi
-        _updateDailyTaskProgress('hit_5_golden');
-        // Altın köstebek başarımını kontrol et
-        if (!_achievements['golden_mole']!) {
-          _achievements['golden_mole'] = true;
-          _saveData();
-        }
+        pointsToAdd = 30;
+        _audioManager.playHitSound(MoleType.golden);
         break;
       case MoleType.speedy:
-        pointsToAdd = 20; // Hızlı köstebek 2x puan
-        // Normal köstebek vurma görevi (speedy de köstebek sayılır)
-        _updateDailyTaskProgress('hit_10_moles');
+        pointsToAdd = 20;
+        _audioManager.playHitSound(MoleType.speedy);
         break;
       case MoleType.tough:
-        pointsToAdd = 25; // Dayanıklı köstebek 2.5x puan
-        // Normal köstebek vurma görevi (tough da köstebek sayılır)
-        _updateDailyTaskProgress('hit_10_moles');
-        break;
-      case MoleType.healing:
-        pointsToAdd = 5; // İyileştirici köstebek az puan verir
-        // Normal köstebek vurma görevi (healing de köstebek sayılır)
-        _updateDailyTaskProgress('hit_10_moles');
-        // Hayatta kalma modunda can ekler
-        if (_currentGameMode == GameMode.survival && _lives < _maxLives) {
-          _lives++;
-          _showMessage("Ekstra Can Kazanıldı!");
+        if (_moleHealth[index] > 1) {
+          _moleHealth[index]--;
+          pointsToAdd = 15;
+          _audioManager.playHitSound(MoleType.tough);
+        } else {
+          pointsToAdd = 25;
+          _moleVisible[index] = false;
+          _audioManager.playHitSound(MoleType.tough);
         }
         break;
+      case MoleType.healing:
+        pointsToAdd = 5;
+        _audioManager.playHitSound(MoleType.healing);
+        if (_currentGameMode == GameMode.survival) {
+          _lives = min(_lives + 1, _maxLives);
+          _showMessage("Can kazandın!", type: MessageType.success);
+        }
+        _moleVisible[index] = false;
+        break;
     }
-
+    
+    // Combo bonusu ekle
+    if (_currentCombo > 1) {
+      pointsToAdd = (pointsToAdd * (1 + (_currentCombo * 0.1))).round(); // Her combo için %10 bonus
+    }
+    
     // Çekiç güçlendirmesi aktifse puanı iki katına çıkar
     if (_activePowerUp == PowerUpType.hammer && _powerUpActive) {
       pointsToAdd *= 2;
       _powerUpActive = false;
       _activePowerUp = null;
     }
-
-    // Puanı güncelle
+    
     _score += pointsToAdd;
     
-    // Puan toplama görevini güncelle
-    if (_score >= 300) {
-      _updateDailyTaskProgress('score_300', _score);
-    }
-    
-    // Başarımları kontrol et
-    if (_score >= 100 && !_achievements['score_100']!) {
-      _achievements['score_100'] = true;
-      _saveData();
-    } else if (_score >= 500 && !_achievements['score_500']!) {
-      _achievements['score_500'] = true;
-      _saveData();
-    }
-    
-    // Yüksek skoru güncelle
-    if (_score > _highScore && _currentGameMode == GameMode.classic) {
-      _highScore = _score;
-    }
-    
-    // Mod bazlı yüksek skoru güncelle
-    if (_score > (_highScores[_currentGameMode] ?? 0)) {
-      _highScores[_currentGameMode] = _score;
-      _saveData();
-    }
-    
-    _showPointAnimation(index, pointsToAdd);
-
-    // Zaman yarışı modunda her vuruş için zaman ekle
-    if (_currentGameMode == GameMode.timeAttack) {
-      // Köstebek tipine göre farklı süre eklemeleri
-      int timeToAdd;
-      switch (_moleTypes[index]) {
-        case MoleType.golden:
-          timeToAdd = 5; // Altın köstebek 5 saniye ekler
-          break;
-        case MoleType.speedy:
-          timeToAdd = 3; // Hızlı köstebek 3 saniye ekler
-          break;
-        case MoleType.tough:
-          timeToAdd = 4; // Dayanıklı köstebek 4 saniye ekler
-          break;
-        default:
-          timeToAdd = 2; // Normal köstebek 2 saniye ekler
-      }
-      
-      _timeLeft += timeToAdd;
-      // Kazanılan zamanı kullanıcıya göster
-      _showMessage("+$timeToAdd saniye!");
-    }
-    
-    // Ses efekti ve titreşim
-    _playSound('hit');
+    // Titreşim
     _vibrate();
     
-    // Oyun durumunu güncelle
+    // Puan animasyonu
+    _pointAnimations[index] = pointsToAdd;
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      _pointAnimations.remove(index);
+      notifyListeners();
+    });
+    
+    // Normal köstebekler için vurulma animasyonu
+    if (_moleTypes[index] == MoleType.normal) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (_isGameActive) {
+          _moleVisible[index] = false;
+          notifyListeners();
+        }
+      });
+    }
+    
     notifyListeners();
   }
   
@@ -799,6 +779,9 @@ class GameProvider extends ChangeNotifier {
       _moleHit[i] = false;
     }
     
+    // Müzik sesini normale döndür
+    _audioManager.resetBackgroundMusicVolume();
+    
     // Asenkron olarak bildir - widget ağacının kilidini bekleyerek
     Future.microtask(() {
       notifyListeners();
@@ -816,6 +799,9 @@ class GameProvider extends ChangeNotifier {
       _moleVisible[i] = false;
       _moleHit[i] = false;
     }
+    
+    // Müzik sesini normale döndür
+    _audioManager.resetBackgroundMusicVolume();
     
     notifyListeners();
   }
@@ -883,28 +869,24 @@ class GameProvider extends ChangeNotifier {
   }
   
   // Ses çalma yardımcı metodu
-  void _playSound(String soundType) {
+  Future<void> _playSound(String soundPath) async {
     if (!_soundEnabled) return;
     
-    switch (soundType) {
-      case 'hit':
-        _audioManager.playHitSound();
-        break;
-      case 'miss':
-        _audioManager.playMissSound();
-        break;
-      case 'button':
-        _audioManager.playButtonSound();
-        break;
-      default:
-        _audioManager.playHitSound();
+    try {
+      // AudioManager üzerinden ses çal
+      await _audioManager.playSound(soundPath);
+    } catch (e) {
+      print('Ses çalma hatası: $e');
     }
   }
   
   // Titreşim oluşturma metodu
   void _vibrate() {
-    // Titreşimi aktif et (hafif titreşim)
-    HapticFeedback.mediumImpact();
+    try {
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      print('Titreşim hatası: $e');
+    }
   }
   
   // Aktif mesajları ve animasyonları depolamak için değişkenler
@@ -1045,5 +1027,38 @@ class GameProvider extends ChangeNotifier {
     }
     
     _updateTaskProgress(taskId, newProgress);
+  }
+
+  // Combo sistemini sıfırla
+  void _resetCombo() {
+    _currentCombo = 0;
+    _comboTimer?.cancel();
+    notifyListeners();
+  }
+  
+  // Combo süresini yenile
+  void _refreshComboTimer() {
+    _comboTimer?.cancel();
+    _comboTimer = Timer(const Duration(milliseconds: _comboTimeout), () {
+      if (_currentCombo > 0) {
+        _showMessage("$_currentCombo Combo!", type: MessageType.success);
+      }
+      _resetCombo();
+    });
+  }
+  
+  // Combo'yu artır
+  void _incrementCombo() {
+    _currentCombo++;
+    if (_currentCombo > _maxCombo) {
+      _maxCombo = _currentCombo;
+    }
+    _refreshComboTimer();
+    
+    // Combo mesajlarını göster ve ses çal
+    if (_currentCombo % 5 == 0) {
+      _showMessage("$_currentCombo Combo!", type: MessageType.success);
+      _audioManager.playComboSound();
+    }
   }
 }

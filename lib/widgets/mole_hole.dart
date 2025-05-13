@@ -10,6 +10,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../utils/game_provider.dart';
+import 'dart:math';
+
+// Parçacık efekti için yeni sınıf
+class ParticleEffect extends StatelessWidget {
+  final Color color;
+  final Offset position;
+  final double size;
+  final double angle;
+  final double speed;
+
+  const ParticleEffect({
+    super.key,
+    required this.color,
+    required this.position,
+    required this.size,
+    required this.angle,
+    required this.speed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: position.dx,
+      top: position.dy,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
+      ).animate(
+        onPlay: (controller) => controller.repeat(),
+      )
+      .move(
+        begin: Offset.zero,
+        end: Offset(
+          cos(angle) * speed,
+          sin(angle) * speed,
+        ),
+        duration: 500.ms,
+        curve: Curves.easeOut,
+      )
+      .fadeOut(duration: 500.ms),
+    );
+  }
+}
 
 class MoleHole extends StatefulWidget {
   final int index;
@@ -38,12 +85,17 @@ class MoleHole extends StatefulWidget {
 class _MoleHoleState extends State<MoleHole> {
   bool _showHammer = false;
   Offset _hammerPosition = Offset.zero;
+  List<ParticleEffect> _particles = [];
+  final Random _random = Random();
 
   void _handleTap(Offset tapPosition) {
     // Çekici göster
     setState(() {
       _showHammer = true;
       _hammerPosition = tapPosition;
+      
+      // Parçacık efektlerini oluştur
+      _createParticles(tapPosition);
     });
     
     // Köstebeğe vurma işlevini çağır
@@ -54,6 +106,53 @@ class _MoleHoleState extends State<MoleHole> {
       if (mounted) {
         setState(() {
           _showHammer = false;
+        });
+      }
+    });
+  }
+
+  void _createParticles(Offset center) {
+    // Köstebek türüne göre parçacık rengi belirle
+    Color particleColor;
+    switch (widget.moleType) {
+      case MoleType.golden:
+        particleColor = Colors.amber;
+        break;
+      case MoleType.speedy:
+        particleColor = Colors.blue;
+        break;
+      case MoleType.tough:
+        particleColor = Colors.red;
+        break;
+      case MoleType.healing:
+        particleColor = Colors.green;
+        break;
+      default:
+        particleColor = Colors.brown;
+    }
+
+    // 8 parçacık oluştur
+    for (int i = 0; i < 8; i++) {
+      double angle = (i * pi / 4) + (_random.nextDouble() * 0.5 - 0.25);
+      double speed = 50 + _random.nextDouble() * 30;
+      double size = 4 + _random.nextDouble() * 4;
+
+      _particles.add(
+        ParticleEffect(
+          color: particleColor,
+          position: center,
+          size: size,
+          angle: angle,
+          speed: speed,
+        ),
+      );
+    }
+
+    // Parçacıkları 500ms sonra temizle
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _particles.clear();
         });
       }
     });
@@ -211,6 +310,9 @@ class _MoleHoleState extends State<MoleHole> {
                         curve: Curves.easeOutBack,
                       )
                   ),
+                
+                // Parçacık efektleri
+                ..._particles,
               ],
             ),
           ),
