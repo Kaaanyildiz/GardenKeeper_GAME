@@ -142,26 +142,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Oyunu yeniden başlat
   void _restartGame() {
     if (mounted) {
-      _gameProvider.startGame();
+      // Dialog gösterim bayrağını sıfırla
+      setState(() {
+        _dialogShowing = false;
+      });
+      
+      // Oyunu tamamen sıfırla ve yeniden başlat
+      _gameProvider.endGame();
+      Future.microtask(() {
+        if (mounted) {
+          _gameProvider.startGame();
+        }
+      });
     }
   }
 
   // Ana menüye dön
   void _goToHome() {
-    // Dialog'u kapatmadan önce _dialogShowing bayrağını false yap
-    setState(() {
-      _dialogShowing = false;
-    });
-    
-    // Oyun durumunu zorla sıfırla (timeLeft'i pozitif bir değere ayarla)
-    _gameProvider.resetGameForHomeScreen();
-    
-    // setState sonrası bir frame bekle
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    });
+    if (mounted) {
+      // Dialog gösterim bayrağını sıfırla
+      setState(() {
+        _dialogShowing = false;
+      });
+      
+      // Önce oyunu tamamen sıfırla
+      _gameProvider.resetGame();
+      
+      // Ana menüye dön
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    }
   }
 
   // Oyun sonu dialogunu göster
@@ -180,22 +189,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           onRestart: () {
             // Dialog'u kapat
             Navigator.of(dialogContext).pop();
-            
-            if (mounted) {
-              setState(() {
-                _dialogShowing = false;
-              });
-              _restartGame();
-            }
+            // Oyunu yeniden başlat
+            _restartGame();
           },
           onHome: () {
             // Dialog'u kapat
             Navigator.of(dialogContext).pop();
-            
-            if (mounted) {
-              // Ana menüye dön fonksiyonunu çağır
-              _goToHome();
-            }
+            // Ana menüye dön
+            _goToHome();
           },
         ),
       );

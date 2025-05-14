@@ -1061,4 +1061,38 @@ class GameProvider extends ChangeNotifier {
       _audioManager.playComboSound();
     }
   }
+
+  // Oyunu tamamen sıfırla
+  void resetGame() {
+    // Oyun durumunu sıfırla
+    _score = 0;
+    _timeLeft = 60;
+    _isGameActive = false;
+    _currentCombo = 0;
+    _maxCombo = 0;
+    _lives = 3;
+    
+    // Köstebek durumlarını sıfırla
+    for (int i = 0; i < _moleVisible.length; i++) {
+      _moleVisible[i] = false;
+      _moleHit[i] = false;
+      _moleTypes[i] = MoleType.normal;
+      _moleHealth[i] = 1;
+    }
+    
+    // Güçlendirme durumlarını sıfırla
+    _activePowerUp = null;
+    _powerUpActive = false;
+    _powerUpDuration = 0;
+    _pendingPowerUpIndex = -1;
+    _pendingPowerUpType = null;
+    
+    // Zamanlayıcıyı iptal et
+    _gameTimer?.cancel();
+    
+    // Müzik sesini normale döndür
+    _audioManager.resetBackgroundMusicVolume();
+    
+    notifyListeners();
+  }
 }
