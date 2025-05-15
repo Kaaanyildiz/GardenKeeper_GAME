@@ -126,16 +126,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   // Güvenli geri dönüş fonksiyonu
   void _safeNavigateBack() {
-    if (_gameProvider.isGameActive) {
-      // Önce oyunu bitir ve sonra Future.microtask ile navigate et
-      _gameProvider.endGame();
-      Future.microtask(() {
-        if (mounted) {
-          Navigator.pop(context);
-        }
-      });
-    } else {
-      Navigator.pop(context);
+    try {
+      if (_gameProvider.isGameActive) {
+        // Önce oyunu bitir ve sonra Future.microtask ile navigate et
+        _gameProvider.endGame();
+        Future.microtask(() {
+          if (mounted) {
+            _gameProvider.resetGameForHomeScreen(); // Oyun durumunu temizle
+            Navigator.pop(context);
+          }
+        });
+      } else {
+        // Oyun aktif değilse bile durumu temizle
+        _gameProvider.resetGameForHomeScreen();
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      // Herhangi bir hata durumunda güvenli çıkış
+      print('Oyundan çıkış hatası: $e');
+      if (mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -235,9 +246,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvoked: (didPop) {
         if (!didPop) {
-          _safeNavigateBack();
+          // Oyun durumunu temizle ve geri dön
+          try {
+            _safeNavigateBack();
+          } catch (e) {
+            print('Geri tuşu hatası: $e');
+            if (mounted) {
+              Navigator.pop(context);
+            }
+          }
         }
       },
       child: Scaffold(

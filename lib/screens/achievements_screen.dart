@@ -16,373 +16,315 @@ class AchievementsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gameProvider = Provider.of<GameProvider>(context);
-    final size = MediaQuery.of(context).size;
-    final bool isSmallScreen = size.width < 400;
-    
-    // Başarımları kontrol et - otomatik güncelleme için
-    gameProvider.checkAchievements();
-    
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        width: double.infinity,
-        height: double.infinity,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Üst bar - Geri butonu ve başlık
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: Colors.brown.shade800,
-                      iconSize: 30,
-                    ),
-                    Expanded(
-                      child: Text(
-                        'BAŞARIMLAR',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.brown.shade800,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(width: 48),  // Dengelemek için
-                  ],
+    return Consumer<GameProvider>(
+      builder: (context, gameProvider, child) {
+        return DefaultTabController(
+          length: 4,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text(
+                'Başarımlar',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              
-              // Başarımların açıklaması
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: Text(
-                  'Özel görevleri tamamlayarak başarımları açın',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16,
-                    color: Colors.brown.shade800,
+              centerTitle: true,
+              backgroundColor: Colors.brown.shade900,
+              elevation: 0,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.brown.shade900,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              
-              // Başarım listesi
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ListView(
-                    children: [
-                      // İlk oyun başarımı
-                      _buildSimpleAchievement(
-                        'Bahçıvan Adayı',
-                        'İlk oyununu oyna',
-                        Icons.play_arrow,
-                        Colors.green,
-                        gameProvider.achievements['first_game'] ?? false,
-                      ),
-                      
-                      // 100 puan başarımı
-                      _buildSimpleAchievement(
-                        'Amatör Bahçıvan',
-                        'Bir oyunda 100 puan topla',
-                        Icons.score,
-                        Colors.blue,
-                        gameProvider.achievements['score_100'] ?? false,
-                      ),
-                      
-                      // 500 puan başarımı
-                      _buildSimpleAchievement(
-                        'Köstebek Avcısı',
-                        'Bir oyunda 500 puan topla',
-                        Icons.stars,
-                        Colors.purple,
-                        gameProvider.achievements['score_500'] ?? false,
-                      ),
-                      
-                      // Altın köstebek başarımı
-                      _buildSimpleAchievement(
-                        'Altın Kazıcı',
-                        'İlk altın köstebeği vur',
-                        Icons.monetization_on,
-                        Colors.amber,
-                        gameProvider.achievements['golden_mole'] ?? false,
-                      ),
-                      
-                      // Tüm modları deneme başarımı
-                      _buildSimpleAchievement(
-                        'Mod Uzmanı',
-                        'Tüm oyun modlarında oyna',
-                        Icons.category,
-                        Colors.teal,
-                        gameProvider.achievements['all_modes'] ?? false,
-                      ),
-                      
-                      // Hayatta kalma modunda uzun süre başarımı
-                      _buildSimpleAchievement(
-                        'Bahçenin Efendisi',
-                        'Hayatta kalma modunda 2 dakika dayan',
-                        Icons.favorite,
-                        Colors.red,
-                        gameProvider.achievements['survival_master'] ?? false,
-                      ),
-                      
-                      // Gelecek başarımlar
-                      const SizedBox(height: 20),
-                      
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-                        child: Text(
-                          'GELECEK BAŞARIMLAR',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.brown.shade700,
-                          ),
+                  child: TabBar(
+                    labelColor: Colors.amber,
+                    unselectedLabelColor: Colors.white.withOpacity(0.5),
+                    labelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 12,
+                    ),
+                    indicator: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.amber.shade600,
+                          width: 3,
                         ),
                       ),
-                      
-                      // Gelecekte eklenecek başarımlar
-                      _buildSimpleLockedAchievement(
-                        'Bahçe Krallığı',
-                        'Gelecek güncellemede açılacak',
+                    ),
+                    padding: const EdgeInsets.only(top: 8),
+                    tabs: const [
+                      Tab(
+                        child: Column(
+                          children: [
+                            Icon(Icons.star_outline, size: 26),
+                            SizedBox(height: 4),
+                            Text(
+                              'Genel',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
                       ),
-                      
-                      _buildSimpleLockedAchievement(
-                        'Köstebek Sihirbazı',
-                        'Gelecek güncellemede açılacak',
+                      Tab(
+                        child: Column(
+                          children: [
+                            Icon(Icons.trending_up, size: 26),
+                            SizedBox(height: 4),
+                            Text(
+                              'Zorluk',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Column(
+                          children: [
+                            Icon(Icons.games, size: 26),
+                            SizedBox(height: 4),
+                            Text(
+                              'Modlar',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Column(
+                          children: [
+                            Icon(Icons.auto_awesome, size: 26),
+                            SizedBox(height: 4),
+                            Text(
+                              'Özel',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              
-              // İstatistik kartı - basitleştirilmiş
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.shade600,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    // Açılan başarım sayısı
-                    Column(
-                      children: [
-                        Icon(
-                          Icons.emoji_events,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${_countUnlockedAchievements(gameProvider)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Açılan Başarımlar',
-                          style: TextStyle(
-                            fontSize: 12, 
-                            color: Colors.white70,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                    // Tamamlanma oranı
-                    Column(
-                      children: [
-                        Icon(
-                          Icons.public,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${_countUnlockedAchievements(gameProvider) * 100 ~/ 6}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Tamamlanma Oranı',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white70,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  // Açılmış başarım sayısını hesapla
-  int _countUnlockedAchievements(GameProvider gameProvider) {
-    int count = 0;
-    gameProvider.achievements.forEach((key, value) {
-      if (value) count++;
-    });
-    return count;
-  }
-  
-  // Basitleştirilmiş başarım widget'ı
-  Widget _buildSimpleAchievement(
-    String title,
-    String description,
-    IconData icon,
-    Color color,
-    bool isUnlocked,
-  ) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isUnlocked ? color.withOpacity(0.15) : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              // İkon kısmı
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isUnlocked ? color : Colors.grey.shade400,
-                ),
-                child: Icon(
-                  isUnlocked ? icon : Icons.lock,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Başlık ve açıklama
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isUnlocked ? Colors.black87 : Colors.grey.shade700,
-                      ),
-                    ),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isUnlocked ? Colors.black54 : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Onay ikonu
-              if (isUnlocked)
-                Icon(
-                  Icons.check_circle,
-                  color: color,
-                  size: 20,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  // Basitleştirilmiş kilitli başarım widget'ı
-  Widget _buildSimpleLockedAchievement(
-    String title,
-    String description,
-  ) {
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade300, width: 1),
-      ),
-      color: Colors.grey.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            // İkon kısmı
-            Container(
-              padding: const EdgeInsets.all(8),
+            ),
+            body: Container(
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.grey.shade300,
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/background.png'),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withOpacity(0.7),
+                    BlendMode.darken,
+                  ),
+                ),
               ),
-              child: const Icon(
-                Icons.help_outline,
-                color: Colors.white,
-                size: 20,
+              child: TabBarView(
+                children: [
+                  _buildAchievementList(gameProvider, AchievementCategory.general),
+                  _buildAchievementList(gameProvider, AchievementCategory.difficulty),
+                  _buildAchievementList(gameProvider, AchievementCategory.mode),
+                  _buildAchievementList(gameProvider, AchievementCategory.special),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            // Başlık ve açıklama
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAchievementList(GameProvider gameProvider, AchievementCategory category) {
+    final achievements = gameProvider.getAchievementsByCategory(category);
+    
+    // Kategorideki toplam puanı hesapla
+    int totalPoints = 0;
+    int earnedPoints = 0;
+    for (var achievement in achievements) {
+      totalPoints += achievement.points;
+      if (gameProvider.isAchievementUnlocked(achievement.id)) {
+        earnedPoints += achievement.points;
+      }
+    }
+
+    return Column(
+      children: [
+        // Kategori başlığı ve puan durumu
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.brown.shade900.withOpacity(0.8),
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.brown.shade700,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Kategori başlığı
+              Text(
+                _getCategoryTitle(category),
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              // Puan durumu
+              Row(
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                  const Icon(
+                    Icons.stars,
+                    color: Colors.amber,
+                    size: 20,
                   ),
+                  const SizedBox(width: 4),
                   Text(
-                    description,
+                    '$earnedPoints / $totalPoints P',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                      fontStyle: FontStyle.italic,
+                      color: Colors.amber.shade100,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+        // Başarım listesi
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(8),
+            itemCount: achievements.length,
+            itemBuilder: (context, index) {
+              final achievement = achievements[index];
+              final isUnlocked = gameProvider.isAchievementUnlocked(achievement.id);
+              final progress = gameProvider.getAchievementProgress(achievement.id);
+
+              // Gizli başarımları gösterme koşulu
+              if (achievement.isHidden && !isUnlocked) {
+                return _buildHiddenAchievement();
+              }
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                color: Colors.brown.shade800.withOpacity(0.8),
+                child: ListTile(
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isUnlocked ? Colors.amber : Colors.grey,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.emoji_events,
+                      color: isUnlocked ? Colors.brown.shade900 : Colors.brown.shade300,
+                      size: 32,
+                    ),
+                  ),
+                  title: Text(
+                    achievement.title,
+                    style: TextStyle(
+                      color: isUnlocked ? Colors.amber : Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        achievement.description,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey.shade800,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isUnlocked ? Colors.amber : Colors.amber.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Text(
+                    '${achievement.points} P',
+                    style: TextStyle(
+                      color: isUnlocked ? Colors.amber : Colors.white.withOpacity(0.5),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Kategori başlıklarını getir
+  String _getCategoryTitle(AchievementCategory category) {
+    switch (category) {
+      case AchievementCategory.general:
+        return 'Genel Başarımlar';
+      case AchievementCategory.difficulty:
+        return 'Zorluk Başarımları';
+      case AchievementCategory.mode:
+        return 'Mod Başarımları';
+      case AchievementCategory.special:
+        return 'Özel Başarımlar';
+    }
+  }
+
+  Widget _buildHiddenAchievement() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      color: Colors.brown.shade900.withOpacity(0.8),
+      child: const ListTile(
+        leading: Icon(
+          Icons.lock,
+          color: Colors.grey,
+          size: 32,
+        ),
+        title: Text(
+          '???',
+          style: TextStyle(
+            color: Colors.grey,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          'Bu başarım gizli! Oyunu oynamaya devam et...',
+          style: TextStyle(
+            color: Colors.grey,
+          ),
+        ),
+        trailing: Text(
+          '? P',
+          style: TextStyle(
+            color: Colors.grey,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
       ),
     );

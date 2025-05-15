@@ -89,6 +89,37 @@ class DailyTask {
   });
 }
 
+// Başarım kategorileri
+enum AchievementCategory {
+  general,     // Genel başarımlar
+  difficulty,  // Zorluk seviyesine özel başarımlar
+  mode,        // Mod özel başarımları
+  special      // Özel/gizli başarımlar
+}
+
+// Başarım sınıfı
+class Achievement {
+  final String id;
+  final String title;
+  final String description;
+  final AchievementCategory category;
+  final String? difficulty;  // Zorluk seviyesi başarımları için
+  final GameMode? gameMode;  // Mod başarımları için
+  final int points;         // Başarım puanı
+  final bool isHidden;      // Gizli başarım mı?
+  
+  const Achievement({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.points,
+    this.difficulty,
+    this.gameMode,
+    this.isHidden = false,
+  });
+}
+
 class GameProvider extends ChangeNotifier {
   // Mevcut değişkenler
   int _score = 0;
@@ -147,14 +178,234 @@ class GameProvider extends ChangeNotifier {
   int _pendingPowerUpIndex = -1;
   PowerUpType? _pendingPowerUpType;
   
-  // Başarılar sistemi
-  final Map<String, bool> _achievements = {
-    'first_game': false,      // İlk oyun
-    'score_100': false,       // 100 puan
-    'score_500': false,       // 500 puan
-    'golden_mole': false,     // İlk altın köstebek
-    'all_modes': false,       // Tüm modları oyna
-    'survival_master': false, // Hayatta kalma modunda 2 dakika
+  // Başarımlar listesi
+  final Map<String, Achievement> _achievements = {
+    // Genel Başarımlar
+    'first_game': Achievement(
+      id: 'first_game',
+      title: 'İlk Adım',
+      description: 'İlk oyununu oyna',
+      category: AchievementCategory.general,
+      points: 5,
+    ),
+    'play_all_modes': Achievement(
+      id: 'play_all_modes',
+      title: 'Çok Yönlü',
+      description: 'Tüm oyun modlarını dene',
+      category: AchievementCategory.general,
+      points: 20,
+    ),
+    'total_score_10k': Achievement(
+      id: 'total_score_10k',
+      title: 'Puan Avcısı',
+      description: 'Toplam 10.000 puan kazan',
+      category: AchievementCategory.general,
+      points: 30,
+    ),
+    'hit_1000_moles': Achievement(
+      id: 'hit_1000_moles',
+      title: 'Köstebek Avcısı',
+      description: 'Toplam 1.000 köstebek vur',
+      category: AchievementCategory.general,
+      points: 40,
+    ),
+    'daily_tasks_10': Achievement(
+      id: 'daily_tasks_10',
+      title: 'Görev Tutkunu',
+      description: '10 günlük görevi tamamla',
+      category: AchievementCategory.general,
+      points: 25,
+    ),
+    'play_100_games': Achievement(
+      id: 'play_100_games',
+      title: 'Bahçıvan',
+      description: '100 oyun oyna',
+      category: AchievementCategory.general,
+      points: 35,
+    ),
+    
+    // Zorluk Seviyesi Başarımları
+    'score_2000_easy': Achievement(
+      id: 'score_2000_easy',
+      title: 'Kolay Başlangıç',
+      description: 'Kolay modda 2.000 puan kazan',
+      category: AchievementCategory.difficulty,
+      difficulty: 'easy',
+      points: 10,
+    ),
+    'score_3000_normal': Achievement(
+      id: 'score_3000_normal',
+      title: 'Orta Seviye Uzman',
+      description: 'Normal modda 3.000 puan kazan',
+      category: AchievementCategory.difficulty,
+      difficulty: 'normal',
+      points: 20,
+    ),
+    'score_4000_hard': Achievement(
+      id: 'score_4000_hard',
+      title: 'Zor Mod Ustası',
+      description: 'Zor modda 4.000 puan kazan',
+      category: AchievementCategory.difficulty,
+      difficulty: 'hard',
+      points: 40,
+    ),
+    'no_miss_easy': Achievement(
+      id: 'no_miss_easy',
+      title: 'Kolay Mükemmellik',
+      description: 'Kolay modda hiç köstebek kaçırmadan oyunu bitir',
+      category: AchievementCategory.difficulty,
+      difficulty: 'easy',
+      points: 15,
+    ),
+    'no_miss_normal': Achievement(
+      id: 'no_miss_normal',
+      title: 'Normal Mükemmellik',
+      description: 'Normal modda hiç köstebek kaçırmadan oyunu bitir',
+      category: AchievementCategory.difficulty,
+      difficulty: 'normal',
+      points: 30,
+    ),
+    'no_miss_hard': Achievement(
+      id: 'no_miss_hard',
+      title: 'Zor Mükemmellik',
+      description: 'Zor modda hiç köstebek kaçırmadan oyunu bitir',
+      category: AchievementCategory.difficulty,
+      difficulty: 'hard',
+      points: 50,
+    ),
+    
+    // Mod Özel Başarımları
+    'classic_combo_20': Achievement(
+      id: 'classic_combo_20',
+      title: 'Klasik Kombo Ustası',
+      description: 'Klasik modda 20x combo yap',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.classic,
+      points: 25,
+    ),
+    'time_attack_180s': Achievement(
+      id: 'time_attack_180s',
+      title: 'Zaman Bükücü',
+      description: 'Zaman Yarışı modunda 180 saniyeye ulaş',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.timeAttack,
+      points: 30,
+    ),
+    'survival_300s': Achievement(
+      id: 'survival_300s',
+      title: 'Hayatta Kalma Uzmanı',
+      description: 'Hayatta Kalma modunda 300 saniye hayatta kal',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.survival,
+      points: 35,
+    ),
+    'special_golden_streak': Achievement(
+      id: 'special_golden_streak',
+      title: 'Altın Avcısı',
+      description: 'Özel modda üst üste 3 altın köstebek vur',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.special,
+      points: 40,
+    ),
+    'classic_master': Achievement(
+      id: 'classic_master',
+      title: 'Klasik Usta',
+      description: 'Klasik modda 5000 puan yap',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.classic,
+      points: 45,
+    ),
+    'time_master': Achievement(
+      id: 'time_master',
+      title: 'Zaman Ustası',
+      description: 'Zaman Yarışı modunda 240 saniyeye ulaş',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.timeAttack,
+      points: 50,
+    ),
+    'survival_master': Achievement(
+      id: 'survival_master',
+      title: 'Hayatta Kalma Efsanesi',
+      description: 'Hayatta Kalma modunda 600 saniye hayatta kal',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.survival,
+      points: 55,
+    ),
+    'special_master': Achievement(
+      id: 'special_master',
+      title: 'Özel Mod Efsanesi',
+      description: 'Özel modda 20 altın köstebek vur',
+      category: AchievementCategory.mode,
+      gameMode: GameMode.special,
+      points: 60,
+    ),
+    
+    // Özel/Gizli Başarımlar
+    'perfect_game': Achievement(
+      id: 'perfect_game',
+      title: 'Mükemmel Oyun',
+      description: 'Hiç köstebek kaçırmadan oyunu bitir',
+      category: AchievementCategory.special,
+      points: 50,
+      isHidden: true,
+    ),
+    'speed_demon': Achievement(
+      id: 'speed_demon',
+      title: 'Hız İblisi',
+      description: '1 saniye içinde 3 köstebek vur',
+      category: AchievementCategory.special,
+      points: 45,
+      isHidden: true,
+    ),
+    'golden_master': Achievement(
+      id: 'golden_master',
+      title: 'Altın Usta',
+      description: 'Tek oyunda 10 altın köstebek vur',
+      category: AchievementCategory.special,
+      points: 40,
+      isHidden: true,
+    ),
+    'combo_king': Achievement(
+      id: 'combo_king',
+      title: 'Kombo Kralı',
+      description: '30x komboya ulaş',
+      category: AchievementCategory.special,
+      points: 55,
+      isHidden: true,
+    ),
+    'marathon_runner': Achievement(
+      id: 'marathon_runner',
+      title: 'Maraton Koşucusu',
+      description: 'Tek oturumda 10 oyun oyna',
+      category: AchievementCategory.special,
+      points: 35,
+      isHidden: true,
+    ),
+    'night_owl': Achievement(
+      id: 'night_owl',
+      title: 'Gece Kuşu',
+      description: 'Gece yarısı (00:00-04:00) oyun oyna',
+      category: AchievementCategory.special,
+      points: 30,
+      isHidden: true,
+    ),
+  };
+
+  // Başarım durumları
+  final Map<String, bool> _achievementStates = {};
+  
+  // Toplam başarım puanı
+  int _achievementPoints = 0;
+  
+  // Başarım istatistikleri
+  final Map<String, int> _stats = {
+    'totalGamesPlayed': 0,
+    'totalMolesHit': 0,
+    'totalScore': 0,
+    'maxCombo': 0,
+    'goldenMolesHit': 0,
+    'perfectGames': 0,
+    'timesSurvived300s': 0,
   };
   
   // Günlük görevler için değişkenler
@@ -218,6 +469,68 @@ class GameProvider extends ChangeNotifier {
   // Tek bir kaçırma sesi
   final String _missSound = 'audio/miss.mp3';
   
+  // Köstebek yönetimi için yeni değişkenler
+  int? _activeMoleIndex;
+  Timer? _moleTimer;
+  bool _isSpawningMole = false;
+  
+  // Zorluk seviyelerine göre köstebek süreleri (milisaniye)
+  final Map<String, int> _moleDurations = {
+    'easy': 2000,    // Kolay: 2 saniye
+    'normal': 1500,  // Normal: 1.5 saniye
+    'hard': 1200,    // Zor: 1.2 saniye
+  };
+  
+  // Zorluk seviyelerine göre minimum ve maksimum bekleme süreleri (milisaniye)
+  final Map<String, Map<String, int>> _spawnDelays = {
+    'easy': {
+      'min': 600,  // En az 0.6 saniye
+      'max': 1500  // En fazla 1.5 saniye
+    },
+    'normal': {
+      'min': 400,  // En az 0.4 saniye
+      'max': 1200  // En fazla 1.2 saniye
+    },
+    'hard': {
+      'min': 200,  // En az 0.2 saniye
+      'max': 800   // En fazla 0.8 saniye
+    }
+  };
+  
+  // Son vuruşların zamanını takip etmek için liste
+  final List<DateTime> _recentHits = [];
+  
+  // Hız İblisi başarımı kontrolü
+  void _checkSpeedDemonAchievement() {
+    if (_achievementStates['speed_demon'] ?? false) return;
+    
+    final now = DateTime.now();
+    _recentHits.add(now);
+    
+    // Son 1 saniye içindeki vuruşları kontrol et
+    _recentHits.removeWhere(
+      (hit) => now.difference(hit).inMilliseconds > 1000
+    );
+    
+    if (_recentHits.length >= 3) {
+      _unlockAchievement('speed_demon');
+    }
+  }
+  
+  // Altın seri başarımı için değişken
+  int _goldenStreak = 0;
+  
+  // Altın seri başarımı kontrolü
+  void _checkGoldenStreak() {
+    if (_currentGameMode != GameMode.special) return;
+    if (_achievementStates['special_golden_streak'] ?? false) return;
+    
+    _goldenStreak++;
+    if (_goldenStreak >= 3) {
+      _unlockAchievement('special_golden_streak');
+    }
+  }
+  
   // Getter'lar - Mevcut olanlar
   int get score => _score;
   int get highScore => _currentGameMode == GameMode.classic ? _highScore : _highScores[_currentGameMode] ?? 0;
@@ -234,7 +547,7 @@ class GameProvider extends ChangeNotifier {
   // Getter'lar - Yeni eklenenler
   GameMode get currentGameMode => _currentGameMode;
   int get lives => _lives;
-  Map<String, bool> get achievements => _achievements;
+  Map<String, bool> get achievementStates => _achievementStates;
   bool get hasPowerUp => _powerUpActive;
   PowerUpType? get activePowerUp => _activePowerUp;
   List<MoleType> get moleTypes => _moleTypes;
@@ -244,7 +557,7 @@ class GameProvider extends ChangeNotifier {
   PowerUpType? get pendingPowerUpType => _pendingPowerUpType;
   
   // Achievements screen için eklenen getter'lar
-  List<String> get unlockedAchievements => _achievements.entries
+  List<String> get unlockedAchievements => _achievementStates.entries
       .where((entry) => entry.value)
       .map((entry) => entry.key)
       .toList();
@@ -294,7 +607,7 @@ class GameProvider extends ChangeNotifier {
     
     // Başarıları yükle
     for (var key in _achievements.keys) {
-      _achievements[key] = prefs.getBool('achievement_$key') ?? false;
+      _achievementStates[key] = prefs.getBool('achievement_$key') ?? false;
     }
     
     // Günlük görev ilerlemelerini yükle
@@ -326,8 +639,8 @@ class GameProvider extends ChangeNotifier {
     await prefs.setInt('highScore_special', _highScores[GameMode.special] ?? 0);
     
     // Başarıları kaydet
-    for (var key in _achievements.keys) {
-      await prefs.setBool('achievement_$key', _achievements[key] ?? false);
+    for (var key in _achievementStates.keys) {
+      await prefs.setBool('achievement_$key', _achievementStates[key] ?? false);
     }
     
     // Günlük görev ilerlemelerini kaydet
@@ -423,6 +736,10 @@ class GameProvider extends ChangeNotifier {
         break;
     }
     
+    // Mevcut mod için oynanma sayısını artır
+    final modeKey = 'played_${_currentGameMode.toString()}';
+    _stats[modeKey] = (_stats[modeKey] as int? ?? 0) + 1;
+    
     // Arkaplan müziğini başlat ve sesi ayarla
     if (_musicEnabled) {
       _audioManager.lowerBackgroundMusicVolume(); // Oyun başladığında sesi kıs
@@ -437,10 +754,14 @@ class GameProvider extends ChangeNotifier {
     }
     
     // İlk oyun başarımı
-    if (!_achievements['first_game']!) {
-      _achievements['first_game'] = true;
-      _saveData();
+    if (!_achievementStates['first_game']!) {
+      _unlockAchievement('first_game');
     }
+    
+    // Oyun başlangıç değerlerini sıfırla
+    _missedMoles = 0;
+    _goldenStreak = 0;
+    _recentHits.clear();
     
     // Zamanlayıcıyı başlat
     _gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -460,10 +781,9 @@ class GameProvider extends ChangeNotifier {
           _timeLeft++;
           
           // 2 dakika (120 saniye) hayatta kalma başarımı kontrolü
-          if (_timeLeft >= 120 && !_achievements['survival_master']!) {
-            _achievements['survival_master'] = true;
+          if (_timeLeft >= 120 && !_achievementStates['survival_300s']!) {
+            _unlockAchievement('survival_300s');
             _showMessage("Başarım: Bahçenin Efendisi!");
-            _saveData();
           }
         }
       }
@@ -499,128 +819,128 @@ class GameProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Köstebek durumu için yardımcı fonksiyon
+  void _cleanupMole(int index) {
+    _moleVisible[index] = false;
+    _moleHit[index] = false;
+    _moleTypes[index] = MoleType.normal;
+    _moleHealth[index] = 1;
+    if (_activeMoleIndex == index) {
+      _activeMoleIndex = null;
+    }
+  }
+
   // Köstebek ve güçlendirmeleri göster
   void _showRandomEntities() {
-    // Önce tüm köstebekleri gizle
+    if (!_isGameActive || _isSpawningMole) return;
+    
+    _isSpawningMole = true;
+    
+    // Tüm aktif köstebekleri temizle
     for (int i = 0; i < _moleVisible.length; i++) {
-      _moleVisible[i] = false;
-      _moleHit[i] = false;
+      if (_moleVisible[i] && !_moleHit[i]) {
+        _hideMole(i);
+      }
     }
     
-    // Zorluğa ve moda göre ayarlamalar
-    int molesToShow;
-    int moleStayDuration; // milisaniye cinsinden
-    bool canShowSpecialMoles = _currentGameMode == GameMode.special;
-    bool canShowPowerUps = _score > 50 && !_powerUpActive; // Belirli bir skordan sonra güçlendirmeler görünebilir
+    // Yeni köstebek için rastgele konum seç
+    int newIndex;
+    do {
+      newIndex = _random.nextInt(_moleVisible.length);
+    } while (_moleVisible[newIndex]); // Görünür olan konumları atla
     
-    switch (_difficulty) {
-      case 'easy':
-        molesToShow = 1;
-        moleStayDuration = 1550;
-        break;
-      case 'normal':
-        molesToShow = Random().nextInt(2) + 1; // 1-2 arası
-        moleStayDuration = 1350;
-        break;
-      case 'hard':
-        molesToShow = Random().nextInt(3) + 1; // 1-3 arası
-        moleStayDuration = 1250;
-        break;
-      default:
-        molesToShow = 1;
-        moleStayDuration = 1200;
-    }
-    
-    // Modlara göre ek ayarlamalar
-    if (_currentGameMode == GameMode.timeAttack) {
-      molesToShow = max(1, molesToShow);
-      moleStayDuration = (moleStayDuration * 0.8).round(); // Daha hızlı
-    } else if (_currentGameMode == GameMode.survival) {
-      moleStayDuration = (moleStayDuration * 1.1).round(); // Biraz daha yavaş
-    }
+    _activeMoleIndex = newIndex;
     
     // Güçlendirme gösterme şansı
-    if (canShowPowerUps && Random().nextDouble() < 0.05) { // %5 şans
+    bool canShowPowerUps = _score > 50 && !_powerUpActive;
+    if (canShowPowerUps && _random.nextDouble() < 0.05) {
       _showRandomPowerUp();
+      _isSpawningMole = false;
+      return;
     }
     
-    // Rastgele köstebekleri göster
-    final random = Random();
-    for (int i = 0; i < molesToShow; i++) {
-      int index = random.nextInt(_moleVisible.length);
-      
-      // Eğer zaten gösteriliyorsa, başka bir indeks bul
-      while (_moleVisible[index]) {
-        index = random.nextInt(_moleVisible.length);
-      }
-      
-      _moleVisible[index] = true;
-      
-      // Özel köstebekler modunda farklı köstebek türleri
-      if (canShowSpecialMoles) {
-        double roll = random.nextDouble();
-        if (roll < 0.15) {
-          _moleTypes[index] = MoleType.golden; // %15 altın köstebek
-        } else if (roll < 0.30) {
-          _moleTypes[index] = MoleType.speedy; // %15 hızlı köstebek
-        } else if (roll < 0.40) {
-          _moleTypes[index] = MoleType.tough; // %10 dayanıklı köstebek
-          _moleHealth[index] = 2; // Dayanıklı köstebekler 2 vuruş gerektirir
-        } else if (_currentGameMode == GameMode.survival && roll < 0.45) {
-          _moleTypes[index] = MoleType.healing; // %5 iyileştirici köstebek - sadece Hayatta Kalma modunda
-        } else {
-          _moleTypes[index] = MoleType.normal;
-        }
+    // Köstebek türünü belirle
+    if (_currentGameMode == GameMode.special) {
+      double roll = _random.nextDouble();
+      if (roll < 0.15) {
+        _moleTypes[newIndex] = MoleType.golden;
+      } else if (roll < 0.30) {
+        _moleTypes[newIndex] = MoleType.speedy;
+      } else if (roll < 0.40) {
+        _moleTypes[newIndex] = MoleType.tough;
+        _moleHealth[newIndex] = 2;
+      } else if (_currentGameMode == GameMode.survival && roll < 0.45) {
+        _moleTypes[newIndex] = MoleType.healing;
       } else {
-        // Diğer modlar için
-        _moleTypes[index] = MoleType.normal;
-        
-        // Hayatta Kalma modunda iyileştirici köstebek şansı
-        if (_currentGameMode == GameMode.survival && random.nextDouble() < 0.15) { // %15 şansa yükseltildi
-          _moleTypes[index] = MoleType.healing;
-        }
+        _moleTypes[newIndex] = MoleType.normal;
+      }
+    } else {
+      _moleTypes[newIndex] = MoleType.normal;
+      if (_currentGameMode == GameMode.survival && _random.nextDouble() < 0.15) {
+        _moleTypes[newIndex] = MoleType.healing;
       }
     }
     
+    // Köstebeği göster
+    _moleVisible[newIndex] = true;
+    _moleHit[newIndex] = false;
     notifyListeners();
     
-    // Köstebek türüne göre görünme süresi ayarlaması
-    for (int i = 0; i < _moleVisible.length; i++) {
-      if (_moleVisible[i]) {
-        int adjustedDuration = moleStayDuration;
-        
-        // Köstebek türüne göre süre ayarla
-        if (_moleTypes[i] == MoleType.speedy) {
-          adjustedDuration = (moleStayDuration * 0.6).round(); // Hızlı köstebek daha az kalır
-        } else if (_moleTypes[i] == MoleType.golden) {
-          adjustedDuration = (moleStayDuration * 0.7).round(); // Altın köstebek az kalır
-        }
-        
-        // Belirli bir süre sonra köstebeği gizle
-        Future.delayed(Duration(milliseconds: adjustedDuration), () async {
-          if (_isGameActive && _moleVisible[i] && !_moleHit[i]) {
-            // Önce ses çal
-            await _audioManager.playMissSound();
-            
-            // Sonra köstebeği gizle
-            _moleVisible[i] = false;
-            
-            // Hayatta kalma modunda kaçırılan köstebek yaşam azaltır
-            if (_currentGameMode == GameMode.survival) {
-              _lives--;
-              // Yaşam hakkı kalmadıysa oyunu bitir
-              if (_lives <= 0) {
-                endGame();
-              }
-              // Yaşam azaldığında mesaj göster
-              _showMessage("Bir canını kaybettin!");
-            }
-            
-            notifyListeners();
-          }
-        });
+    // Köstebek süresini ayarla
+    int duration = _moleDurations[_difficulty] ?? 1500;
+    if (_moleTypes[newIndex] == MoleType.speedy) {
+      duration = (duration * 0.6).round();
+    } else if (_moleTypes[newIndex] == MoleType.golden) {
+      duration = (duration * 0.7).round();
+    }
+    
+    // Köstebeği gizleme zamanlayıcısı
+    _moleTimer?.cancel();
+    _moleTimer = Timer(Duration(milliseconds: duration), () {
+      if (_isGameActive && _moleVisible[newIndex] && !_moleHit[newIndex]) {
+        _hideMole(newIndex);
+      }
+    });
+    
+    // Sonraki köstebek için rastgele bir süre belirle
+    final delays = _spawnDelays[_difficulty] ?? _spawnDelays['normal']!;
+    final randomDelay = _random.nextInt(delays['max']! - delays['min']!) + delays['min']!;
+    
+    Future.delayed(Duration(milliseconds: randomDelay), () {
+      _isSpawningMole = false;
+      if (_isGameActive) {
+        _showRandomEntities();
+      }
+    });
+  }
+  
+  // Köstebeği gizle
+  void _hideMole(int index) {
+    if (!_moleVisible[index]) return;
+    
+    // Mükemmel oyun takibi için kaçırılan köstebekleri say
+    if (!_moleHit[index]) {
+      _missedMoles++;
+    }
+    
+    _cleanupMole(index);
+    
+    // Altın seriyi sıfırla
+    _goldenStreak = 0;
+    
+    // Hayatta kalma modunda can azalt
+    if (_currentGameMode == GameMode.survival && !_moleHit[index]) {
+      _lives--;
+      if (_lives <= 0) {
+        endGame();
+      } else {
+        _showMessage("Bir canını kaybettin!");
       }
     }
+    
+    // Kaçırma sesi çal
+    _audioManager.playMissSound();
+    notifyListeners();
   }
   
   // Rastgele güçlendirme göster
@@ -711,101 +1031,23 @@ class GameProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // Köstebeğe vur - farklı köstebek türleri için güncellendi
-  void hitMole(int index) {
-    if (!_isGameActive || !_moleVisible[index] || _moleHit[index]) return;
-    
-    _moleHit[index] = true;
-    
-    // Combo sistemini güncelle
-    _incrementCombo();
-    
-    // Köstebek tipine göre puan hesaplama ve ses çalma
-    int pointsToAdd = 0;
-    switch (_moleTypes[index]) {
-      case MoleType.normal:
-        pointsToAdd = 10;
-        _audioManager.playHitSound(MoleType.normal);
-        break;
-      case MoleType.golden:
-        pointsToAdd = 30;
-        _audioManager.playHitSound(MoleType.golden);
-        break;
-      case MoleType.speedy:
-        pointsToAdd = 20;
-        _audioManager.playHitSound(MoleType.speedy);
-        break;
-      case MoleType.tough:
-        if (_moleHealth[index] > 1) {
-          _moleHealth[index]--;
-          pointsToAdd = 15;
-          _audioManager.playHitSound(MoleType.tough);
-        } else {
-          pointsToAdd = 25;
-          _moleVisible[index] = false;
-          _audioManager.playHitSound(MoleType.tough);
-        }
-        break;
-      case MoleType.healing:
-        pointsToAdd = 5;
-        _audioManager.playHitSound(MoleType.healing);
-        if (_currentGameMode == GameMode.survival) {
-          _lives = min(_lives + 1, _maxLives);
-          _showMessage("Can kazandın!", type: MessageType.success);
-        }
-        // Vurulma animasyonunu göstermek için önce görünür bırak
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (_isGameActive) {
-            _moleVisible[index] = false;
-            notifyListeners();
-          }
-        });
-        break;
-    }
-    
-    // Combo bonusu ekle
-    if (_currentCombo > 1) {
-      pointsToAdd = (pointsToAdd * (1 + (_currentCombo * 0.1))).round(); // Her combo için %10 bonus
-    }
-    
-    // Çekiç güçlendirmesi aktifse puanı iki katına çıkar
-    if (_activePowerUp == PowerUpType.hammer && _powerUpActive) {
-      pointsToAdd *= 2;
-      _powerUpActive = false;
-      _activePowerUp = null;
-    }
-    
-    _score += pointsToAdd;
-    
-    // Titreşim
-    _vibrate();
-    
-    // Puan animasyonu
-    _pointAnimations[index] = pointsToAdd;
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      _pointAnimations.remove(index);
-      notifyListeners();
-    });
-    
-    // Normal köstebekler için vurulma animasyonu
-    if (_moleTypes[index] == MoleType.normal) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (_isGameActive) {
-          _moleVisible[index] = false;
-          notifyListeners();
-        }
-      });
-    }
-    
-    notifyListeners();
-  }
-  
   // Oyunu bitir - güvenli şekilde
   void endGame() {
     if (!_isGameActive) return; // Zaten durmuşsa bir şey yapma
     
     _isGameActive = false;
     _gameTimer?.cancel();
+    
+    // Mükemmel oyun kontrolü
+    if (_missedMoles == 0) {
+      _stats['perfectGames'] = (_stats['perfectGames'] ?? 0) + 1;
+    }
+    
+    // İstatistikleri güncelle
+    _updateStats();
+    
+    // Başarımları kontrol et
+    _checkAchievements();
     
     // Oyun sonu sesi çal
     _audioManager.playGameOverSound();
@@ -846,63 +1088,211 @@ class GameProvider extends ChangeNotifier {
   // Nesne imha edildiğinde zamanlayıcıyı iptal et
   @override
   void dispose() {
+    _moleTimer?.cancel();
     _gameTimer?.cancel();
     super.dispose();
   }
   
-  // Başarıları güncellemek için yardımcı metod
-  void checkAchievements() {
-    // Tüm modları oyna başarımı
-    bool allModesPlayed = true;
-    for (var mode in GameMode.values) {
-      if ((_highScores[mode] ?? 0) <= 0) {
-        allModesPlayed = false;
-        break;
+  // Başarımları güncellemek için yardımcı metod
+  void _checkAchievements() {
+    bool anyUnlocked = false;
+
+    // Genel başarımlar kontrolü
+    if (!_achievementStates['first_game']!) {
+      _unlockAchievement('first_game');
+      anyUnlocked = true;
+    }
+
+    if (_stats['totalScore']! >= 10000 && !_achievementStates['total_score_10k']!) {
+      _unlockAchievement('total_score_10k');
+      anyUnlocked = true;
+    }
+
+    if (_stats['totalMolesHit']! >= 1000 && !_achievementStates['hit_1000_moles']!) {
+      _unlockAchievement('hit_1000_moles');
+      anyUnlocked = true;
+    }
+
+    // Yeni genel başarımlar kontrolü
+    if (_stats['totalGamesPlayed']! >= 100 && !_achievementStates['play_100_games']!) {
+      _unlockAchievement('play_100_games');
+      anyUnlocked = true;
+    }
+
+    if (_stats['completedDailyTasks']! >= 10 && !_achievementStates['daily_tasks_10']!) {
+      _unlockAchievement('daily_tasks_10');
+      anyUnlocked = true;
+    }
+
+    // Zorluk seviyesi başarımları kontrolü
+    if (_difficulty == 'easy') {
+      if (_score >= 2000 && !_achievementStates['score_2000_easy']!) {
+        _unlockAchievement('score_2000_easy');
+        anyUnlocked = true;
+      }
+      if (_missedMoles == 0 && !_achievementStates['no_miss_easy']!) {
+        _unlockAchievement('no_miss_easy');
+        anyUnlocked = true;
       }
     }
     
-    if (allModesPlayed && !_achievements['all_modes']!) {
-      _achievements['all_modes'] = true;
+    if (_difficulty == 'normal') {
+      if (_score >= 3000 && !_achievementStates['score_3000_normal']!) {
+        _unlockAchievement('score_3000_normal');
+        anyUnlocked = true;
+      }
+      if (_missedMoles == 0 && !_achievementStates['no_miss_normal']!) {
+        _unlockAchievement('no_miss_normal');
+        anyUnlocked = true;
+      }
+    }
+    
+    if (_difficulty == 'hard') {
+      if (_score >= 4000 && !_achievementStates['score_4000_hard']!) {
+        _unlockAchievement('score_4000_hard');
+        anyUnlocked = true;
+      }
+      if (_missedMoles == 0 && !_achievementStates['no_miss_hard']!) {
+        _unlockAchievement('no_miss_hard');
+        anyUnlocked = true;
+      }
+    }
+
+    // Mod başarımları kontrolü
+    switch (_currentGameMode) {
+      case GameMode.classic:
+        if (_currentCombo >= 20 && !_achievementStates['classic_combo_20']!) {
+          _unlockAchievement('classic_combo_20');
+          anyUnlocked = true;
+        }
+        if (_score >= 5000 && !_achievementStates['classic_master']!) {
+          _unlockAchievement('classic_master');
+          anyUnlocked = true;
+        }
+        break;
+
+      case GameMode.timeAttack:
+        if (_timeLeft >= 180 && !_achievementStates['time_attack_180s']!) {
+          _unlockAchievement('time_attack_180s');
+          anyUnlocked = true;
+        }
+        if (_timeLeft >= 240 && !_achievementStates['time_master']!) {
+          _unlockAchievement('time_master');
+          anyUnlocked = true;
+        }
+        break;
+
+      case GameMode.survival:
+        if (_timeLeft >= 300 && !_achievementStates['survival_300s']!) {
+          _unlockAchievement('survival_300s');
+          anyUnlocked = true;
+        }
+        if (_timeLeft >= 600 && !_achievementStates['survival_master']!) {
+          _unlockAchievement('survival_master');
+          anyUnlocked = true;
+        }
+        break;
+
+      case GameMode.special:
+        if (_goldenStreak >= 3 && !_achievementStates['special_golden_streak']!) {
+          _unlockAchievement('special_golden_streak');
+          anyUnlocked = true;
+        }
+        if (_stats['goldenMolesHitInGame']! >= 20 && !_achievementStates['special_master']!) {
+          _unlockAchievement('special_master');
+          anyUnlocked = true;
+        }
+        break;
+    }
+
+    // Özel/Gizli başarımlar kontrolü
+    _checkSpecialAchievements();
+
+    if (anyUnlocked) {
       _saveData();
     }
   }
-  
-  // Günlük görev sistemi için
-  bool isDailyTaskCompleted(String taskId) {
-    // Burada gerçek bir uygulama, tarihlere göre görevleri kontrol eder
-    return false; // Şimdilik false dönelim
-  }
-  
-  // Kullanıcı bir günlük görevi tamamladığında
-  void completeDailyTask(String taskId) {
-    // Günlük görev tamamlama işlemleri
-    _saveData();
-  }
-  
-  // Rastgele köstebek tipi seçen fonksiyon
-  MoleType _getRandomMoleType() {
-    // Zorluk seviyesine göre farklı olasılıklar kullan
-    double randomValue = _random.nextDouble();
-    
-    // Hayatta kalma modunda iyileştirici köstebek çıkma olasılığını artır
-    double healingChance = _currentGameMode == GameMode.survival ? 0.08 : 0.03;
-    
-    // Zorluk seviyesi arttıkça, özel köstebeklerin çıkma olasılığı da artar
-    double goldenChance = 0.15 + (_difficultyLevel * 0.03);
-    double speedyChance = 0.15 + (_difficultyLevel * 0.05);
-    double toughChance = 0.10 + (_difficultyLevel * 0.04);
-    
-    if (randomValue < healingChance) {
-      return MoleType.healing;
-    } else if (randomValue < healingChance + goldenChance) {
-      return MoleType.golden;
-    } else if (randomValue < healingChance + goldenChance + speedyChance) {
-      return MoleType.speedy;
-    } else if (randomValue < healingChance + goldenChance + speedyChance + toughChance) {
-      return MoleType.tough;
-    } else {
-      return MoleType.normal;
+
+  // Özel başarımları kontrol et
+  void _checkSpecialAchievements() {
+    // Mükemmel oyun kontrolü
+    if (_missedMoles == 0 && !_achievementStates['perfect_game']!) {
+      _unlockAchievement('perfect_game');
     }
+
+    // Altın usta kontrolü
+    if (_stats['goldenMolesHitInGame']! >= 10 && !_achievementStates['golden_master']!) {
+      _unlockAchievement('golden_master');
+    }
+
+    // Kombo kralı kontrolü
+    if (_currentCombo >= 30 && !_achievementStates['combo_king']!) {
+      _unlockAchievement('combo_king');
+    }
+
+    // Maraton koşucusu kontrolü
+    if (_stats['gamesInSession']! >= 10 && !_achievementStates['marathon_runner']!) {
+      _unlockAchievement('marathon_runner');
+    }
+
+    // Gece kuşu kontrolü
+    final now = DateTime.now();
+    if (now.hour >= 0 && now.hour < 4 && !_achievementStates['night_owl']!) {
+      _unlockAchievement('night_owl');
+    }
+  }
+
+  // Stats için yeni alanlar ekleyelim
+  void _initializeStats() {
+    if (!_stats.containsKey('completedDailyTasks')) _stats['completedDailyTasks'] = 0;
+    if (!_stats.containsKey('gamesInSession')) _stats['gamesInSession'] = 0;
+    if (!_stats.containsKey('goldenMolesHitInGame')) _stats['goldenMolesHitInGame'] = 0;
+  }
+
+  // Oyun başlangıcında stats'i güncelle
+  void _updateGameStartStats() {
+    _stats['gamesInSession'] = (_stats['gamesInSession'] ?? 0) + 1;
+    _stats['goldenMolesHitInGame'] = 0; // Her oyun başında sıfırla
+  }
+
+  // Altın köstebek vuruşlarını takip et
+  void _updateGoldenMoleStats() {
+    _stats['goldenMolesHitInGame'] = (_stats['goldenMolesHitInGame'] ?? 0) + 1;
+  }
+
+  // Başarım bildirimini göster
+  void _showAchievementNotification(Achievement achievement) {
+    _showMessage(
+      "Yeni Başarım: ${achievement.title}!",
+      type: MessageType.success,
+    );
+  }
+
+  // Başarım aç
+  void _unlockAchievement(String id, [BuildContext? context]) {
+    if (!_achievements.containsKey(id)) return;
+    
+    _achievementStates[id] = true;
+    _achievementPoints += _achievements[id]!.points;
+    
+    final achievement = _achievements[id]!;
+    
+    // Başarım bildirimini göster
+    _showAchievementNotification(achievement);
+    
+    _saveData(); // Başarımı kaydet
+  }
+
+  // İstatistikleri güncelle
+  void _updateStats() {
+    _stats['totalGamesPlayed'] = (_stats['totalGamesPlayed'] ?? 0) + 1;
+    _stats['totalScore'] = (_stats['totalScore'] ?? 0) + _score;
+    
+    if (_currentCombo > (_stats['maxCombo'] ?? 0)) {
+      _stats['maxCombo'] = _currentCombo;
+    }
+    
+    _saveData();
   }
   
   // Ses çalma yardımcı metodu
@@ -981,9 +1371,13 @@ class GameProvider extends ChangeNotifier {
   }
   // Puan animasyonu gösterme
   void _showPointAnimation(int index, int points) {
-    // Hemen göstermeye başla
-    // Her bir köstebek için ayrı bir animasyon göster - diğerlerini etkileme
-    addPointAnimation(index, points);
+    _pointAnimations[index] = points;
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (_isGameActive) {
+        _pointAnimations.remove(index);
+        notifyListeners();
+      }
+    });
   }
 
   // Günlük görevleri kontrol et ve güncelle
@@ -1131,5 +1525,197 @@ class GameProvider extends ChangeNotifier {
     _audioManager.resetBackgroundMusicVolume();
     
     notifyListeners();
+  }
+
+  // Köstebeğe vur
+  void hitMole(int index) {
+    if (!_isGameActive || !_moleVisible[index] || _moleHit[index]) return;
+    
+    // İstatistikleri güncelle
+    _stats['totalMolesHit'] = (_stats['totalMolesHit'] ?? 0) + 1;
+    if (_moleTypes[index] == MoleType.golden) {
+      _stats['goldenMolesHit'] = (_stats['goldenMolesHit'] ?? 0) + 1;
+    }
+    
+    // Hız İblisi başarımı için son vuruş zamanlarını kontrol et
+    _checkSpeedDemonAchievement();
+    
+    // Altın seri başarımı için kontrol
+    if (_moleTypes[index] == MoleType.golden) {
+      _checkGoldenStreak();
+    }
+    
+    // Combo sistemini güncelle
+    _incrementCombo();
+    
+    // Köstebek tipine göre puan hesaplama ve ses çalma
+    int pointsToAdd = 0;
+    switch (_moleTypes[index]) {
+      case MoleType.normal:
+        pointsToAdd = 10;
+        _audioManager.playHitSound(MoleType.normal);
+        _moleHit[index] = true;
+        break;
+      case MoleType.golden:
+        pointsToAdd = 30;
+        _audioManager.playHitSound(MoleType.golden);
+        _moleHit[index] = true;
+        break;
+      case MoleType.speedy:
+        pointsToAdd = 20;
+        _audioManager.playHitSound(MoleType.speedy);
+        _moleHit[index] = true;
+        break;
+      case MoleType.tough:
+        if (_moleHealth[index] > 1) {
+          // İlk vuruş
+          _moleHealth[index]--;
+          pointsToAdd = 15;
+          _audioManager.playHitSound(MoleType.tough);
+          
+          // Mevcut zamanlayıcıyı iptal et ve yeni bir tane başlat
+          _moleTimer?.cancel();
+          _moleTimer = Timer(Duration(milliseconds: _moleDurations[_difficulty] ?? 1500), () {
+            if (_isGameActive && _moleVisible[index] && !_moleHit[index]) {
+              _hideMole(index);
+            }
+          });
+          
+          // Puanı ekle ve bildir
+          _score += pointsToAdd;
+          _showPointAnimation(index, pointsToAdd);
+          notifyListeners();
+          return;
+        } else {
+          // Son vuruş
+          pointsToAdd = 25;
+          _audioManager.playHitSound(MoleType.tough);
+          _moleHit[index] = true;
+        }
+        break;
+      case MoleType.healing:
+        pointsToAdd = 5;
+        _audioManager.playHitSound(MoleType.healing);
+        _moleHit[index] = true;
+        if (_currentGameMode == GameMode.survival) {
+          _lives = min(_lives + 1, _maxLives);
+          _showMessage("Can kazandın!", type: MessageType.success);
+        }
+        break;
+    }
+    
+    // Combo bonusu ekle
+    if (_currentCombo > 1) {
+      pointsToAdd = (pointsToAdd * (1 + (_currentCombo * 0.1))).round();
+    }
+    
+    // Çekiç güçlendirmesi aktifse puanı iki katına çıkar
+    if (_activePowerUp == PowerUpType.hammer && _powerUpActive) {
+      pointsToAdd *= 2;
+      _powerUpActive = false;
+      _activePowerUp = null;
+    }
+    
+    _score += pointsToAdd;
+    
+    // Titreşim
+    _vibrate();
+    
+    // Puan animasyonu göster
+    _showPointAnimation(index, pointsToAdd);
+    
+    // Vurulma animasyonu ve köstebeği gizleme
+    Future.delayed(Duration(milliseconds: _moleTypes[index] == MoleType.healing ? 300 : 200), () {
+      if (_isGameActive) {
+        _cleanupMole(index);
+        notifyListeners();
+        
+        // Zaman Yarışı modunda süre ekle
+        if (_currentGameMode == GameMode.timeAttack) {
+          _timeLeft += 2;
+          _showMessage("+2 saniye!", type: MessageType.success);
+        }
+      }
+    });
+    
+    notifyListeners();
+  }
+
+  // Mükemmel oyun takibi için değişken
+  int _missedMoles = 0;
+
+  // Başarım puanı için getter
+  int get achievementPoints => _achievementPoints;
+
+  // Başarım kategorisine göre başarımları getir
+  List<Achievement> getAchievementsByCategory(AchievementCategory category) {
+    return _achievements.values
+        .where((achievement) => achievement.category == category)
+        .toList();
+  }
+
+  // Başarımın kilidinin açık olup olmadığını kontrol et
+  bool isAchievementUnlocked(String id) {
+    return _achievementStates[id] ?? false;
+  }
+
+  // Başarım ilerleme durumunu hesapla
+  double getAchievementProgress(String id) {
+    if (!_achievements.containsKey(id)) return 0.0;
+    if (_achievementStates[id] ?? false) return 1.0;
+
+    final achievement = _achievements[id]!;
+    switch (id) {
+      case 'first_game':
+        return _stats['totalGamesPlayed']! > 0 ? 1.0 : 0.0;
+      
+      case 'play_all_modes':
+        int modesPlayed = 0;
+        for (var mode in GameMode.values) {
+          // Her mod için oynanan oyun sayısını kontrol et
+          final playCount = _stats['played_${mode.toString()}'] as int? ?? 0;
+          if (playCount > 0) modesPlayed++;
+        }
+        return modesPlayed / GameMode.values.length;
+      
+      case 'total_score_10k':
+        return (_stats['totalScore'] ?? 0) / 10000.0;
+      
+      case 'hit_1000_moles':
+        return (_stats['totalMolesHit'] ?? 0) / 1000.0;
+      
+      case 'score_2000_easy':
+        return (_stats['highScore_easy'] ?? 0) / 2000.0;
+      
+      case 'score_3000_normal':
+        return (_stats['highScore_normal'] ?? 0) / 3000.0;
+      
+      case 'score_4000_hard':
+        return (_stats['highScore_hard'] ?? 0) / 4000.0;
+      
+      case 'classic_combo_20':
+        return (_stats['maxCombo'] ?? 0) / 20.0;
+      
+      case 'time_attack_180s':
+        return (_stats['maxTimeAttackTime'] ?? 0) / 180.0;
+      
+      case 'survival_300s':
+        return (_stats['maxSurvivalTime'] ?? 0) / 300.0;
+      
+      case 'special_golden_streak':
+        return (_stats['maxGoldenStreak'] ?? 0) / 3.0;
+      
+      case 'perfect_game':
+        return _stats['perfectGames']! > 0 ? 1.0 : 0.0;
+      
+      case 'speed_demon':
+        return (_stats['maxHitsInSecond'] ?? 0) / 3.0;
+      
+      case 'golden_master':
+        return (_stats['goldenMolesHit'] ?? 0) / 10.0;
+      
+      default:
+        return 0.0;
+    }
   }
 }
