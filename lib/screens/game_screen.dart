@@ -9,13 +9,17 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../providers/game/enums/game_mode.dart';
+import '../providers/game/enums/power_up_type.dart';
 import 'package:provider/provider.dart';
 import 'dart:math';
-import '../utils/game_provider.dart';
+import '../providers/game/game_provider.dart';
 import '../widgets/mole_hole.dart';
 import '../widgets/game_over_dialog.dart';
-import '../widgets/power_up_widget.dart'; // Güçlendirme widget'ı
-import '../widgets/game_messages_overlay.dart'; // Mesaj overlay'i
+import '../widgets/power_up_widget.dart';
+import '../widgets/game_messages_overlay.dart';
+import '../widgets/level_progress_widget.dart';
+import '../widgets/level_up_animation.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -106,6 +110,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         });
       }
     });
+
+    // GameScreen'e GlobalKey ata
+    // Navigator.pushReplacement ile navigation yapılmamalı!
+    // Bu kod kaldırıldı. Oyun ekranı doğrudan açılmalı.
   }
 
   @override
@@ -214,10 +222,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _triggerShake() {
-    _shakeController.forward(from: 0);
-  }
-
   @override
   Widget build(BuildContext context) {
     final gameProvider = Provider.of<GameProvider>(context);
@@ -244,19 +248,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     }
     
+    // Seviye atlama animasyonu
+    if (gameProvider.pendingLevelUp) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => LevelUpAnimation(
+            level: gameProvider.pendingLevel,
+            title: 'Yeni Seviye!',
+            coins: gameProvider.pendingCoins,
+            unlockedItems: gameProvider.pendingUnlockedItems,
+            onComplete: () {
+              Navigator.of(context).pop();
+              gameProvider.clearPendingLevelUp();
+            },
+          ),
+        );
+      });
+    }
+    
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
-          // Oyun durumunu temizle ve geri dön
-          try {
-            _safeNavigateBack();
-          } catch (e) {
-            print('Geri tuşu hatası: $e');
-            if (mounted) {
-              Navigator.pop(context);
-            }
-          }
+          _safeNavigateBack();
         }
       },
       child: Scaffold(
@@ -271,7 +287,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     image: AssetImage('assets/images/background.png'),
                     fit: BoxFit.cover,
                   ),
-                  // Mod rengine göre arka plan renk katmanı eklenir
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -284,7 +299,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 child: SafeArea(
                   child: Column(
                     children: [
-                      // Mod Bilgi Bandı (Yeni)
+                      // Mod Bilgi Bandı
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 500),
                         height: 30,
@@ -311,6 +326,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
+                      ),
+                      
+                      // Seviye ilerleme widget'ı
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        child: const LevelProgressWidget(),
                       ),
                       
                       // Üst bilgi paneli
@@ -769,39 +793,55 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         return 'Zaman Dondurma';
       case PowerUpType.moleReveal:
         return 'Köstebek Gösterici';
+      case PowerUpType.shield:
+        return 'Kalkan';
+      case PowerUpType.magnet:
+        return 'Mıknatıs';
     }
   }
     // Güçlendirme açıklamasını döndür
   String _getPowerUpDescription(PowerUpType powerUp) {
     switch (powerUp) {
       case PowerUpType.hammer:
-        return 'Bir sonraki vuruş 2x puan kazandırır!';
+        return 'Tüm vuruşlardan çift puan kazan!';
       case PowerUpType.timeFreezer:
         return 'Süre geçici olarak donduruldu!';
       case PowerUpType.moleReveal:
-        return 'Tüm köstebekler kısa süre görünür!';
+        return 'Köstebeklerin yerini gör!'; 
+      case PowerUpType.shield:
+        return 'Kaçan köstebeklerden hasar alma!';
+      case PowerUpType.magnet:
+        return 'Köstebekler daha uzun süre görünür!';
     }
   }
-    // Güçlendirme ikonunu döndür
+    // Güçlendirme ikonunu döndür 
   IconData _getPowerUpIcon(PowerUpType powerUp) {
     switch (powerUp) {
       case PowerUpType.hammer:
         return Icons.gavel;
       case PowerUpType.timeFreezer:
-        return Icons.hourglass_disabled;
+        return Icons.ac_unit;
       case PowerUpType.moleReveal:
-        return Icons.visibility;
+        return Icons.remove_red_eye;
+      case PowerUpType.shield:
+        return Icons.shield;
+      case PowerUpType.magnet:
+        return Icons.attractions;
     }
   }
-  // Güçlendirme rengini döndür
+    // Güçlendirme rengini döndür
   Color _getPowerUpColor(PowerUpType powerUp) {
     switch (powerUp) {
       case PowerUpType.hammer:
-        return Colors.amber.shade700;
+        return Colors.orange;
       case PowerUpType.timeFreezer:
-        return Colors.cyan.shade700;
+        return Colors.blue;
       case PowerUpType.moleReveal:
-        return Colors.green.shade700;
+        return Colors.purple;
+      case PowerUpType.shield:
+        return Colors.green;
+      case PowerUpType.magnet:
+        return Colors.red;
     }
   }
 }

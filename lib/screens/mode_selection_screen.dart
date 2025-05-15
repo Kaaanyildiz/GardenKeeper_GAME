@@ -8,8 +8,9 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:kostebekvurma/providers/game/enums/game_mode.dart';
 import 'package:provider/provider.dart';
-import '../utils/game_provider.dart';
+import '../providers/game/game_provider.dart';
 import 'game_screen.dart';
 
 class ModeSelectionScreen extends StatelessWidget {
@@ -38,8 +39,8 @@ class ModeSelectionScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () async {
-                        await gameProvider.playButtonSound();
+                      onPressed: () {
+                        gameProvider.playButtonSound();
                         if (context.mounted) {
                           Navigator.pop(context);
                         }
@@ -186,15 +187,17 @@ class ModeSelectionScreen extends StatelessWidget {
         child: InkWell(
           onTap: () async {
             // Oyun modunu ayarla ve oyun ekranına git
-            gameProvider.setGameMode(gameMode);
-            if (context.mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GameScreen(),
-                ),
-              );
-            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              gameProvider.setGameMode(gameMode);
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GameScreen(),
+                  ),
+                );
+              }
+            });
           },
           borderRadius: BorderRadius.circular(16), // 20'den 16'ya düşürüldü
           splashColor: Colors.white.withOpacity(0.3),

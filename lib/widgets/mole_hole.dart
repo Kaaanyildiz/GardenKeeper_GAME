@@ -9,7 +9,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../utils/game_provider.dart';
+import '../providers/game/enums/mole_type.dart';
+import '../providers/game/enums/power_up_type.dart';
 import 'dart:math';
 
 // Parçacık efekti için yeni sınıf

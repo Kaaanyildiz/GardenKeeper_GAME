@@ -33,7 +33,6 @@ class GameOverDialog extends StatefulWidget {
 class _GameOverDialogState extends State<GameOverDialog> with TickerProviderStateMixin {
   late AnimationController _moleAnimationController;
   int _stars = 0;
-  bool _showMole = false;
   
   @override
   void initState() {
@@ -350,7 +349,7 @@ class _GameOverDialogState extends State<GameOverDialog> with TickerProviderStat
     Future.delayed(Duration(seconds: 2 + Random().nextInt(4)), () {
       if (mounted) {
         setState(() {
-          _showMole = true;
+          
         });
         
         _moleAnimationController.reset();
@@ -358,9 +357,6 @@ class _GameOverDialogState extends State<GameOverDialog> with TickerProviderStat
         
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) {
-            setState(() {
-              _showMole = false;
-            });
             _showRandomMole();
           }
         });

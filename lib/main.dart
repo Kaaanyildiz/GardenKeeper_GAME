@@ -15,7 +15,7 @@ import 'screens/game_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/achievements_screen.dart'; // Yeni eklendi
 import 'screens/mode_selection_screen.dart'; // Yeni eklendi
-import 'utils/game_provider.dart';
+import 'providers/game/game_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import '../utils/game_provider.dart';
+import '../providers/game/enums/message_type.dart';
+import '../providers/game/game_provider.dart';
 
 // Oyun içi mesajları görüntülemek için widget
 class GameMessagesOverlay extends StatelessWidget {
@@ -83,6 +84,12 @@ class GameMessagesOverlay extends StatelessWidget {
         return Colors.red.shade700;
       case MessageType.info:
         return Colors.blue.shade700;
+      case MessageType.combo:
+        return Colors.purple.shade700;
+      case MessageType.reward:
+        return Colors.amber.shade700;
+      case MessageType.task:
+        return Colors.teal.shade700;
     }
   }
 }

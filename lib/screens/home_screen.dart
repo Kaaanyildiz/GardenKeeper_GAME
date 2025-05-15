@@ -9,7 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../utils/game_provider.dart';
+import '../providers/game/game_provider.dart';
 import 'mode_selection_screen.dart'; // Yeni eklenen ekran
 
 class HomeScreen extends StatelessWidget {

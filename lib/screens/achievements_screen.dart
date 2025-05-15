@@ -8,8 +8,13 @@
  */
 
 import 'package:flutter/material.dart';
+import '../providers/game/models/achievement.dart' as achievement;
+import '../providers/game/enums/achievement_category.dart';
 import 'package:provider/provider.dart';
-import '../utils/game_provider.dart';
+import '../providers/game/game_provider.dart';
+
+// Çakışmayı önlemek için alias kullanıyoruz
+typedef Achievement = achievement.Achievement;
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
@@ -64,7 +69,6 @@ class AchievementsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    padding: const EdgeInsets.only(top: 8),
                     tabs: const [
                       Tab(
                         child: Column(
@@ -207,7 +211,7 @@ class AchievementsScreen extends StatelessWidget {
           ),
         ),
         // Başarım listesi
-        Expanded(
+        Flexible(
           child: ListView.builder(
             padding: const EdgeInsets.all(8),
             itemCount: achievements.length,

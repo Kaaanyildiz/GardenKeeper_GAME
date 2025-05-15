@@ -10,7 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import '../utils/game_provider.dart';
+import '../providers/game/game_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -40,8 +40,8 @@ class SettingsScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () async {
-                        await gameProvider.playButtonSound();
+                      onPressed: () {
+                        gameProvider.playButtonSound();
                         if (context.mounted) {
                           Navigator.pop(context);
                         }
