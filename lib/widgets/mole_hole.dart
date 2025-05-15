@@ -163,9 +163,11 @@ class _MoleHoleState extends State<MoleHole> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.maxWidth;
-        // Köstebek boyutunu ekran boyutuna göre ayarla
-        final moleSize = size * 0.7;
-        final moleYPosition = widget.isHit ? -size * 0.1 : size * 0.1;
+        // Köstebek boyutunu ve konumunu ayarla
+        final moleSize = size * 0.85; // Köstebek boyutunu biraz daha büyüttüm
+        final holeSize = size * 0.9;
+        // Köstebeğin Y pozisyonunu deliğin ortasına göre ayarla
+        final moleYPosition = widget.isHit ? size * 0.3 : size * 0.25;
         
         return GestureDetector(
           onTapDown: (details) {
@@ -186,77 +188,33 @@ class _MoleHoleState extends State<MoleHole> {
             ),
             child: Stack(
               clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
                 // Köstebek deliği (daima görünür)
-                SizedBox.expand(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(size * 0.2),
-                    child: Image.asset(
-                      'assets/images/hole.png',
-                      fit: BoxFit.cover,
+                Center(
+                  child: Container(
+                    width: holeSize,
+                    height: holeSize,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(size * 0.2),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(size * 0.2),
+                      child: Image.asset(
+                        'assets/images/hole.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
                 
-                // Güçlendirme görünümü
-                if (widget.isVisible && widget.isPowerUp && widget.powerUpType != null)
-                  Positioned(
-                    bottom: moleYPosition,
-                    left: 0,
-                    right: 0,
-                    child: SizedBox(
-                      height: moleSize,
-                      child: _buildPowerUpImage(widget.powerUpType!),
-                    ),
-                  ).animate(
-                    onPlay: (controller) => controller.repeat(reverse: true),
-                  )
-                  .fadeIn(duration: 300.ms)
-                  .then()
-                  .moveY(
-                    begin: 5, 
-                    end: -5,
-                    duration: 1.seconds,
-                    curve: Curves.easeInOut
-                  ),
-                
-                // Köstebek (koşullu olarak görünür)
-                if (widget.isVisible && !widget.isPowerUp)
-                  Positioned(
-                    bottom: moleYPosition, // Vurulduğunda daha aşağıya iner
-                    left: 0,
-                    right: 0,
-                    child: SizedBox(
-                      height: moleSize,
-                      child: _buildMoleImage().animate(
-                        onPlay: (controller) => controller.repeat(),
-                      )
-                      .then(delay: 300.ms)
-                      .shake(
-                        hz: _getMoleAnimationSpeed(),
-                        curve: Curves.easeInOutCubic,
-                      ),
-                    ),
-                  ),
-                  
-                // Vurulma efekti (koşullu olarak görünür)
-                if (widget.isHit)
-                  Positioned.fill(
-                    child: Image.asset(
-                      'assets/images/explosion.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ).animate()
-                    .scale(
-                      duration: 300.ms,
-                      curve: Curves.easeOutBack,
-                    )
-                    .then()
-                    .fadeOut(duration: 300.ms),
-                    
                 // Altın köstebek efekti
                 if (widget.isVisible && widget.moleType == MoleType.golden && !widget.isHit)
-                  Positioned.fill(
+                  Positioned(
+                    bottom: moleYPosition,
+                    left: (size - moleSize) / 2,
+                    width: moleSize,
+                    height: moleSize,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(size * 0.2),
@@ -280,7 +238,11 @@ class _MoleHoleState extends State<MoleHole> {
                 
                 // Dayanıklı köstebek efekti - çift halka
                 if (widget.isVisible && widget.moleType == MoleType.tough && !widget.isHit)
-                  Positioned.fill(
+                  Positioned(
+                    bottom: moleYPosition,
+                    left: (size - moleSize) / 2,
+                    width: moleSize,
+                    height: moleSize,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(size * 0.2),
@@ -291,11 +253,63 @@ class _MoleHoleState extends State<MoleHole> {
                       ),
                     ),
                   ),
+                
+                // Güçlendirme görünümü
+                if (widget.isVisible && widget.isPowerUp && widget.powerUpType != null)
+                  Positioned(
+                    bottom: moleYPosition,
+                    left: (size - moleSize) / 2,
+                    width: moleSize,
+                    height: moleSize,
+                    child: _buildPowerUpImage(widget.powerUpType!),
+                  ).animate(
+                    onPlay: (controller) => controller.repeat(reverse: true),
+                  )
+                  .fadeIn(duration: 300.ms)
+                  .then()
+                  .moveY(
+                    begin: 5, 
+                    end: -5,
+                    duration: 1.seconds,
+                    curve: Curves.easeInOut
+                  ),
+                
+                // Köstebek (koşullu olarak görünür)
+                if (widget.isVisible && !widget.isPowerUp)
+                  Positioned(
+                    bottom: moleYPosition,
+                    left: (size - moleSize) / 2,
+                    width: moleSize,
+                    height: moleSize,
+                    child: _buildMoleImage().animate(
+                      onPlay: (controller) => controller.repeat(),
+                    )
+                    .then(delay: 300.ms)
+                    .shake(
+                      hz: _getMoleAnimationSpeed(),
+                      curve: Curves.easeInOutCubic,
+                    ),
+                  ),
+                  
+                // Vurulma efekti (koşullu olarak görünür)
+                if (widget.isHit)
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/explosion.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ).animate()
+                    .scale(
+                      duration: 300.ms,
+                      curve: Curves.easeOutBack,
+                    )
+                    .then()
+                    .fadeOut(duration: 300.ms),
                     
                 // Çekiç animasyonu
                 if (_showHammer)
                   Positioned(
-                    left: _hammerPosition.dx - (size * 0.4), // Çekicin merkezi tıklama noktasında olsun
+                    left: _hammerPosition.dx - (size * 0.4),
                     top: _hammerPosition.dy - (size * 0.4),
                     width: size * 0.8,
                     height: size * 0.8,

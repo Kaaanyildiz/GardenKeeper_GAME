@@ -40,8 +40,11 @@ class SettingsScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () {
-                        Navigator.pop(context);
+                      onPressed: () async {
+                        await gameProvider.playButtonSound();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       },
                       icon: Icon(Icons.arrow_back, size: isSmallScreen ? 24 : 30),
                       color: Colors.brown.shade800,
@@ -171,6 +174,49 @@ class SettingsScreen extends StatelessWidget {
                         
                         SizedBox(height: size.height * 0.015),
                         
+                        // Ses efektleri seviyesi kontrolü
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: size.width * 0.04, 
+                            vertical: size.height * 0.01
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.brown.shade200,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.volume_up,
+                                    color: Colors.brown.shade800,
+                                    size: isSmallScreen ? 24 : 30,
+                                  ),
+                                  SizedBox(width: size.width * 0.03),
+                                  Text(
+                                    'Ses Efektleri Seviyesi',
+                                    style: TextStyle(
+                                      fontSize: size.width * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.brown.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Slider(
+                                value: gameProvider.soundVolume,
+                                onChanged: gameProvider.soundEnabled ? 
+                                  (value) => gameProvider.setSoundVolume(value) : null,
+                                activeColor: Colors.brown.shade600,
+                                inactiveColor: Colors.brown.shade300,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        SizedBox(height: size.height * 0.015),
+                        
                         // Müzik açma/kapama
                         Container(
                           padding: EdgeInsets.symmetric(
@@ -205,6 +251,49 @@ class SettingsScreen extends StatelessWidget {
                                 onChanged: (value) => gameProvider.setMusicEnabled(value),
                                 activeColor: Colors.green.shade600,
                                 activeTrackColor: Colors.green.shade200,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        SizedBox(height: size.height * 0.015),
+                        
+                        // Müzik seviyesi kontrolü
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: size.width * 0.04, 
+                            vertical: size.height * 0.01
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.brown.shade200,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.music_note,
+                                    color: Colors.brown.shade800,
+                                    size: isSmallScreen ? 24 : 30,
+                                  ),
+                                  SizedBox(width: size.width * 0.03),
+                                  Text(
+                                    'Müzik Seviyesi',
+                                    style: TextStyle(
+                                      fontSize: size.width * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.brown.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Slider(
+                                value: gameProvider.musicVolume,
+                                onChanged: gameProvider.musicEnabled ? 
+                                  (value) => gameProvider.setMusicVolume(value) : null,
+                                activeColor: Colors.brown.shade600,
+                                inactiveColor: Colors.brown.shade300,
                               ),
                             ],
                           ),

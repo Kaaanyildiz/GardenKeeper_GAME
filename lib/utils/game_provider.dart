@@ -110,6 +110,8 @@ class GameProvider extends ChangeNotifier {
   // Ses ayarları
   bool _soundEnabled = true;
   bool _musicEnabled = true;
+  double _soundVolume = 1.0; // Ses efektleri seviyesi (0.0 - 1.0)
+  double _musicVolume = 1.0; // Müzik seviyesi (0.0 - 1.0)
   
   // Köstebek kontrolü için değişkenler
   final Random _random = Random();
@@ -341,6 +343,13 @@ class GameProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Buton sesi çal - public metod
+  Future<void> playButtonSound() async {
+    if (_soundEnabled) {
+      await _audioManager.playButtonSound();
+    }
+  }
+  
   // Ses ayarlarını değiştir
   void setSoundEnabled(bool enabled) {
     _soundEnabled = enabled;
@@ -356,12 +365,32 @@ class GameProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Ses seviyesi getter ve setter'ları
+  double get soundVolume => _soundVolume;
+  double get musicVolume => _musicVolume;
+  
+  void setSoundVolume(double volume) {
+    _soundVolume = volume.clamp(0.0, 1.0);
+    _audioManager.setSoundVolume(_soundVolume);
+    saveSettings();
+    notifyListeners();
+  }
+  
+  void setMusicVolume(double volume) {
+    _musicVolume = volume.clamp(0.0, 1.0);
+    _audioManager.setMusicVolume(_musicVolume);
+    saveSettings();
+    notifyListeners();
+  }
+  
   // Ayarları kaydet
   Future<void> saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('difficulty', _difficulty);
     await prefs.setBool('soundEnabled', _soundEnabled);
     await prefs.setBool('musicEnabled', _musicEnabled);
+    await prefs.setDouble('soundVolume', _soundVolume);
+    await prefs.setDouble('musicVolume', _musicVolume);
+    await prefs.setString('difficulty', _difficulty);
   }
   
   // Zorluk seviyesini değiştir
@@ -568,8 +597,12 @@ class GameProvider extends ChangeNotifier {
         }
         
         // Belirli bir süre sonra köstebeği gizle
-        Future.delayed(Duration(milliseconds: adjustedDuration), () {
+        Future.delayed(Duration(milliseconds: adjustedDuration), () async {
           if (_isGameActive && _moleVisible[i] && !_moleHit[i]) {
+            // Önce ses çal
+            await _audioManager.playMissSound();
+            
+            // Sonra köstebeği gizle
             _moleVisible[i] = false;
             
             // Hayatta kalma modunda kaçırılan köstebek yaşam azaltır
@@ -579,12 +612,10 @@ class GameProvider extends ChangeNotifier {
               if (_lives <= 0) {
                 endGame();
               }
-              // Yaşam azaldığında mesaj göster ve ses çal
+              // Yaşam azaldığında mesaj göster
               _showMessage("Bir canını kaybettin!");
             }
             
-            // Iskalandığında ses çal
-            _audioManager.playMissSound();
             notifyListeners();
           }
         });
@@ -722,7 +753,13 @@ class GameProvider extends ChangeNotifier {
           _lives = min(_lives + 1, _maxLives);
           _showMessage("Can kazandın!", type: MessageType.success);
         }
-        _moleVisible[index] = false;
+        // Vurulma animasyonunu göstermek için önce görünür bırak
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (_isGameActive) {
+            _moleVisible[index] = false;
+            notifyListeners();
+          }
+        });
         break;
     }
     

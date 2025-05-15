@@ -148,6 +148,7 @@ class HomeScreen extends StatelessWidget {
                               // Başlat butonu - yeni mod seçimi ekranına yönlendirildi
                               GestureDetector(
                                 onTap: () {
+                                  gameProvider.playButtonSound();
                                   Navigator.push(
                                     context, 
                                     MaterialPageRoute(
@@ -157,7 +158,7 @@ class HomeScreen extends StatelessWidget {
                                 },
                                 child: SizedBox(
                                   width: buttonWidth,
-                                  height: maxHeight * 0.12, // Oransal yükseklik ekledim
+                                  height: maxHeight * 0.12,
                                   child: Image.asset(
                                     'assets/images/button_play.png',
                                     fit: BoxFit.contain,
@@ -165,7 +166,7 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ),
                               
-                              SizedBox(height: maxHeight * 0.02), // 0.025'ten 0.02'ye düşürdüm
+                              SizedBox(height: maxHeight * 0.02),
                               
                               // Başarımlar butonu
                               buildSimpleMenuButton(
@@ -175,11 +176,12 @@ class HomeScreen extends StatelessWidget {
                                 buttonWidth: buttonWidth * 0.4,
                                 color: Colors.amber.shade800,
                                 onTap: () {
+                                  gameProvider.playButtonSound();
                                   Navigator.pushNamed(context, '/achievements');
                                 },
                               ),
                               
-                              SizedBox(height: maxHeight * 0.015), // 0.02'den 0.015'e düşürdüm
+                              SizedBox(height: maxHeight * 0.015),
                               
                               // Ayarlar butonu
                               buildSimpleMenuButton(
@@ -189,6 +191,7 @@ class HomeScreen extends StatelessWidget {
                                 buttonWidth: buttonWidth * 0.4,
                                 color: Colors.brown.shade600,
                                 onTap: () {
+                                  gameProvider.playButtonSound();
                                   Navigator.pushNamed(context, '/settings');
                                 },
                               ),

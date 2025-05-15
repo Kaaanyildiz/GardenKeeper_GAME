@@ -19,6 +19,7 @@ class ModeSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 400 || size.height < 600;
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
     
     return Scaffold(
       body: Container(
@@ -37,8 +38,11 @@ class ModeSelectionScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () {
-                        Navigator.pop(context);
+                      onPressed: () async {
+                        await gameProvider.playButtonSound();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       },
                       icon: Icon(Icons.arrow_back, size: isSmallScreen ? 24 : 30),
                       color: Colors.brown.shade800,
@@ -180,15 +184,17 @@ class ModeSelectionScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             // Oyun modunu ayarla ve oyun ekranına git
             gameProvider.setGameMode(gameMode);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const GameScreen(),
-              ),
-            );
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GameScreen(),
+                ),
+              );
+            }
           },
           borderRadius: BorderRadius.circular(16), // 20'den 16'ya düşürüldü
           splashColor: Colors.white.withOpacity(0.3),

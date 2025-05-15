@@ -15,15 +15,20 @@ class AudioManager {
   static final AudioManager _instance = AudioManager._internal();
   factory AudioManager() => _instance;
   
-  AudioManager._internal();
+  AudioManager._internal() {
+    _initMusicPlayer();
+  }
   
-  final AudioPlayer _musicPlayer = AudioPlayer();
+  late AudioPlayer _musicPlayer;
   final Set<AudioPlayer> _activePlayers = {};
   final int _maxConcurrentSounds = 5; // Maksimum eşzamanlı ses sayısı
   
   bool _soundEnabled = true;
   bool _musicEnabled = true;
   bool _isDisposed = false;
+  double _soundVolume = 1.0;
+  double _musicVolume = 1.0;
+  bool _isMusicInitialized = false;
   
   // Ses efektleri - tam dosya yolları
   static const String hitSound = 'audio/hit_normal.wav';
@@ -40,9 +45,44 @@ class AudioManager {
   // Müzik
   static const String backgroundMusic = 'audio/background_music.mp3';
   
+  void _initMusicPlayer() {
+    _musicPlayer = AudioPlayer();
+  }
+
+  Future<void> _recreateMusicPlayer() async {
+    try {
+      await _musicPlayer.dispose();
+      _initMusicPlayer();
+      _isMusicInitialized = false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Müzik oynatıcı yeniden oluşturulurken hata: $e');
+      }
+    }
+  }
+  
   void initialize() {
     if (_isDisposed) return;
-    _musicPlayer.setReleaseMode(ReleaseMode.loop);
+    _initializeBackgroundMusic();
+  }
+  
+  Future<void> _initializeBackgroundMusic() async {
+    if (_isDisposed || _isMusicInitialized) return;
+    
+    try {
+      await _musicPlayer.stop(); // Önce durduralım
+      await _musicPlayer.setReleaseMode(ReleaseMode.loop);
+      await _musicPlayer.setSourceAsset(backgroundMusic);
+      await _musicPlayer.setVolume(_musicVolume);
+      _isMusicInitialized = true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Arkaplan müziği başlatılırken hata: $e');
+      }
+      _isMusicInitialized = false;
+      // Hata durumunda müzik oynatıcıyı yeniden oluştur
+      await _recreateMusicPlayer();
+    }
   }
   
   void setSoundEnabled(bool enabled) {
@@ -53,83 +93,123 @@ class AudioManager {
     }
   }
   
-  void setMusicEnabled(bool enabled) {
+  void setMusicEnabled(bool enabled) async {
     if (_isDisposed) return;
     _musicEnabled = enabled;
-    if (enabled) {
-      playBackgroundMusic();
-    } else {
-      _musicPlayer.stop();
-      _musicPlayer.setVolume(1.0);
+    
+    try {
+      if (enabled) {
+        await playBackgroundMusic();
+      } else {
+        // Müziği tamamen durdur
+        await _musicPlayer.stop();
+        _isMusicInitialized = false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Müzik durumu değiştirilirken hata: $e');
+      }
     }
   }
   
-  void _stopAllSounds() {
+  Future<void> _stopAllSounds() async {
     if (_isDisposed) return;
     
     final playersToCleanup = List<AudioPlayer>.from(_activePlayers);
     for (var player in playersToCleanup) {
-      _cleanupPlayer(player);
+      try {
+        await player.stop();
+        await player.dispose();
+      } catch (e) {
+        if (kDebugMode) {
+          print('Ses durdurulurken hata: $e');
+        }
+      }
     }
     _activePlayers.clear();
   }
   
-  void _cleanupOldestPlayer() {
+  Future<void> _cleanupOldestPlayer() async {
     if (_isDisposed || _activePlayers.isEmpty) return;
     
     final oldestPlayer = _activePlayers.first;
-    _cleanupPlayer(oldestPlayer);
+    await _cleanupPlayer(oldestPlayer);
+  }
+  
+  Future<void> _cleanupPlayer(AudioPlayer player) async {
+    if (_isDisposed) return;
+    
+    try {
+      if (_activePlayers.contains(player)) {
+        await player.stop();
+        await player.dispose();
+        _activePlayers.remove(player);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ses oynatıcı temizlenirken hata: $e');
+      }
+      _activePlayers.remove(player);
+    }
+  }
+  
+  void setSoundVolume(double volume) {
+    if (_isDisposed) return;
+    _soundVolume = volume.clamp(0.0, 1.0);
+    // Aktif ses efektlerinin seviyesini güncelle
+    for (var player in _activePlayers) {
+      player.setVolume(_soundVolume);
+    }
+  }
+  
+  void setMusicVolume(double volume) {
+    if (_isDisposed) return;
+    _musicVolume = volume.clamp(0.0, 1.0);
+    _musicPlayer.setVolume(_musicVolume);
   }
   
   Future<void> playSound(String soundName) async {
     if (_isDisposed || !_soundEnabled) return;
     
     if (_activePlayers.length >= _maxConcurrentSounds) {
-      _cleanupOldestPlayer();
+      await _cleanupOldestPlayer();
     }
     
     AudioPlayer? player;
     try {
       player = AudioPlayer();
-      _activePlayers.add(player);
       
+      // Ses seviyesini ayarla
+      await player.setVolume(_soundVolume);
+      
+      // Kaynağı ayarla ve çalmaya başla
       final source = AssetSource(soundName);
-      
-      // Ses çalma işlemini başlat
       await player.play(source);
       
+      _activePlayers.add(player);
+      
       // Ses çalma durumunu izle
-      player.onPlayerStateChanged.listen((state) {
+      player.onPlayerStateChanged.listen((state) async {
         if (state == PlayerState.completed || 
             state == PlayerState.stopped || 
             state == PlayerState.disposed) {
-          if (!_isDisposed && _activePlayers.contains(player)) {
-            _cleanupPlayer(player!);
-          }
+          await _cleanupPlayer(player!);
         }
       });
+      
+      // 3 saniye sonra otomatik temizleme
+      Future.delayed(const Duration(seconds: 3), () async {
+        if (_activePlayers.contains(player)) {
+          await _cleanupPlayer(player!);
+        }
+      });
+      
     } catch (e) {
       if (kDebugMode) {
-        print('Ses çalınırken hata oluştu: $e - Ses dosyası: $soundName');
+        print('Ses çalınırken hata: $e - Ses dosyası: $soundName');
       }
       if (player != null) {
-        _cleanupPlayer(player);
-      }
-    }
-  }
-  
-  void _cleanupPlayer(AudioPlayer player) {
-    if (_isDisposed) return;
-    
-    try {
-      if (_activePlayers.contains(player)) {
-        player.stop();
-        player.dispose();
-        _activePlayers.remove(player);
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Ses temizlenirken hata oluştu: $e');
+        await _cleanupPlayer(player);
       }
     }
   }
@@ -163,8 +243,21 @@ class AudioManager {
   
   Future<void> playMissSound() async {
     if (_isDisposed || !_soundEnabled) return;
+    
     try {
-      await playSound(missSound);
+      final player = AudioPlayer();
+      _activePlayers.add(player);
+      
+      // Ses seviyesini hemen ayarla
+      await player.setVolume(_soundVolume);
+      
+      // Sesi çal ve temizleme işlemini planla
+      await player.play(AssetSource(missSound));
+      
+      // Ses çalındıktan sonra temizle
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _cleanupPlayer(player);
+      });
     } catch (e) {
       if (kDebugMode) {
         print('Kaçırma sesi çalınırken hata oluştu: $e');
@@ -186,7 +279,18 @@ class AudioManager {
   Future<void> playButtonSound() async {
     if (_isDisposed || !_soundEnabled) return;
     try {
-      await playSound(buttonSound);
+      final player = AudioPlayer();
+      _activePlayers.add(player);
+      
+      // Ses seviyesini hemen ayarla
+      await player.setVolume(_soundVolume);
+      
+      // Sesi çal ve temizleme işlemini planla
+      player.play(AssetSource(buttonSound)).then((_) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _cleanupPlayer(player);
+        });
+      });
     } catch (e) {
       if (kDebugMode) {
         print('Buton sesi çalınırken hata oluştu: $e');
@@ -220,16 +324,56 @@ class AudioManager {
     if (_isDisposed || !_musicEnabled) return;
     
     try {
+      if (!_isMusicInitialized) {
+        await _initializeBackgroundMusic();
+      }
+      
       if (_musicPlayer.state == PlayerState.playing) {
-        await _musicPlayer.setVolume(1.0);
         return;
       }
       
-      await _musicPlayer.play(AssetSource(backgroundMusic));
-      await _musicPlayer.setVolume(1.0);
+      await _musicPlayer.setVolume(_musicVolume);
+      await _musicPlayer.resume();
     } catch (e) {
       if (kDebugMode) {
-        print('Müzik çalınırken hata oluştu: $e');
+        print('Arkaplan müziği çalınırken hata: $e');
+      }
+      // Hata durumunda yeniden başlatmayı dene
+      _isMusicInitialized = false;
+      try {
+        await _initializeBackgroundMusic();
+        await _musicPlayer.resume();
+      } catch (retryError) {
+        if (kDebugMode) {
+          print('Müzik yeniden başlatılırken hata: $retryError');
+        }
+      }
+    }
+  }
+  
+  Future<void> pauseBackgroundMusic() async {
+    if (_isDisposed || !_musicEnabled) return;
+    
+    try {
+      if (_musicPlayer.state == PlayerState.playing) {
+        await _musicPlayer.pause();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Müzik duraklatılırken hata oluştu: $e');
+      }
+    }
+  }
+  
+  Future<void> stopBackgroundMusic() async {
+    if (_isDisposed) return;
+    
+    try {
+      await _musicPlayer.stop();
+      _isMusicInitialized = false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Müzik durdurulurken hata oluştu: $e');
       }
     }
   }
@@ -238,7 +382,8 @@ class AudioManager {
     if (_isDisposed || !_musicEnabled) return;
     
     try {
-      await _musicPlayer.setVolume(0.2);
+      // Mevcut ses seviyesinin %20'sine düşür
+      await _musicPlayer.setVolume(_musicVolume * 0.2);
     } catch (e) {
       if (kDebugMode) {
         print('Müzik sesi ayarlanırken hata oluştu: $e');
@@ -250,7 +395,7 @@ class AudioManager {
     if (_isDisposed || !_musicEnabled) return;
     
     try {
-      await _musicPlayer.setVolume(1.0);
+      await _musicPlayer.setVolume(_musicVolume);
     } catch (e) {
       if (kDebugMode) {
         print('Müzik sesi ayarlanırken hata oluştu: $e');
@@ -262,14 +407,38 @@ class AudioManager {
     if (_isDisposed) return;
     
     _isDisposed = true;
-    _stopAllSounds();
     
     try {
-      _musicPlayer.stop();
-      _musicPlayer.dispose();
+      // Önce tüm sesleri durdur
+      _stopAllSounds().then((_) {
+        // Sonra müziği durdur
+        stopBackgroundMusic().then((_) {
+          // Tüm aktif ses oynatıcılarını temizle
+          for (var player in _activePlayers) {
+            try {
+              player.stop();
+              player.dispose();
+            } catch (e) {
+              if (kDebugMode) {
+                print('Ses oynatıcı temizlenirken hata: $e');
+              }
+            }
+          }
+          _activePlayers.clear();
+          
+          // Son olarak müzik oynatıcısını temizle
+          try {
+            _musicPlayer.dispose();
+          } catch (e) {
+            if (kDebugMode) {
+              print('Müzik oynatıcı temizlenirken hata: $e');
+            }
+          }
+        });
+      });
     } catch (e) {
       if (kDebugMode) {
-        print('Müzik oynatıcı dispose edilirken hata oluştu: $e');
+        print('AudioManager dispose edilirken hata: $e');
       }
     }
   }
