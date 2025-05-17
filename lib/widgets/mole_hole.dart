@@ -12,6 +12,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/game/enums/mole_type.dart';
 import '../providers/game/enums/power_up_type.dart';
 import 'dart:math';
+import '../utils/audio_manager.dart';
 
 // Parçacık efekti için yeni sınıf
 class ParticleEffect extends StatelessWidget {
@@ -90,26 +91,36 @@ class _MoleHoleState extends State<MoleHole> {
   final Random _random = Random();
 
   void _handleTap(Offset tapPosition) {
-    // Çekici göster
-    setState(() {
-      _showHammer = true;
-      _hammerPosition = tapPosition;
-      
-      // Parçacık efektlerini oluştur
-      _createParticles(tapPosition);
-    });
-    
-    // Köstebeğe vurma işlevini çağır
-    widget.onTap();
-    
-    // Kısa bir süre sonra çekici gizle
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _showHammer = false;
-        });
-      }
-    });
+    // Sadece köstebek görünür, vurulmamış ve güçlendirme değilse ses ve efekt tetiklenir
+    if (widget.isVisible && !widget.isHit && !widget.isPowerUp) {
+      setState(() {
+        _showHammer = true;
+        _hammerPosition = tapPosition;
+        _createParticles(tapPosition);
+      });
+      AudioManager().playHitSound(widget.moleType);
+      widget.onTap();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          setState(() {
+            _showHammer = false;
+          });
+        }
+      });
+    } else {
+      // Boşa tıklama: sadece çekiç animasyonu göster, ses ve onTap yok
+      setState(() {
+        _showHammer = true;
+        _hammerPosition = tapPosition;
+      });
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          setState(() {
+            _showHammer = false;
+          });
+        }
+      });
+    }
   }
 
   void _createParticles(Offset center) {
@@ -462,3 +473,4 @@ class _MoleHoleState extends State<MoleHole> {
     }
   }
 }
+// (Bu dosyada Provider veya GameProvider kullanılmıyor, optimize etmek için ana ekranda GridView.builder'da Selector kullanılmalı. Burada ek bir değişiklik gerekmiyor.)

@@ -156,6 +156,9 @@ class ModeSelectionScreen extends StatelessWidget {
     required GameMode gameMode,
   }) {
     final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    // DEBUG: Provider instance tipini logla
+    // ignore: avoid_print
+    print('GameProvider runtimeType: \\${gameProvider.runtimeType}');
     
     // Kart yüksekliği daha kompakt hale getirildi
     final cardHeight = isSmallScreen ? 120.0 : 140.0;
@@ -188,6 +191,7 @@ class ModeSelectionScreen extends StatelessWidget {
           onTap: () async {
             // Oyun modunu ayarla ve oyun ekranına git
             WidgetsBinding.instance.addPostFrameCallback((_) {
+              gameProvider.fullResetGameState(); // State'i tam sıfırla
               gameProvider.setGameMode(gameMode);
               if (context.mounted) {
                 Navigator.push(

@@ -115,10 +115,10 @@ mixin GameMessageMixin on MixinInterface {
   }
 
   // Mesaj göster
-  void showMessage(String message, {Duration? duration}) {
+  void showMessage(String message, {MessageType type = MessageType.info, Duration? duration}) {
     _currentMessage = message;
     _isMessageVisible = true;
-    _messageDuration = duration ?? const Duration(seconds: 2);
+    _messageDuration = duration ?? Duration(milliseconds: type.animationDuration);
     notifyListenersInternal();
 
     Future.delayed(_messageDuration, () {

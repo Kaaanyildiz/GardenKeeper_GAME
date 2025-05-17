@@ -16,6 +16,8 @@ import 'screens/settings_screen.dart';
 import 'screens/achievements_screen.dart'; // Yeni eklendi
 import 'screens/mode_selection_screen.dart'; // Yeni eklendi
 import 'providers/game/game_provider.dart';
+import 'widgets/splash_screen.dart';
+import 'utils/audio_manager.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,16 +55,93 @@ class MyApp extends StatelessWidget {
           secondary: Colors.green.shade700,
         ),
         useMaterial3: true,
-        fontFamily: 'GameFont',
+        fontFamily: 'LuckiestGuy',
       ),
-      initialRoute: '/',
+      // SplashScreen ve preload logic ile başlat
+      home: const AppEntry(),
       routes: {
-        '/': (context) => const HomeScreen(),
         '/game': (context) => const GameScreen(),
         '/settings': (context) => const SettingsScreen(),
-        '/achievements': (context) => const AchievementsScreen(), // Yeni eklendi
-        '/mode_selection': (context) => const ModeSelectionScreen(), // Yeni eklendi
+        '/achievements': (context) => const AchievementsScreen(),
+        '/mode_selection': (context) => const ModeSelectionScreen(),
       },
     );
+  }
+}
+
+class AppEntry extends StatefulWidget {
+  const AppEntry({super.key});
+
+  @override
+  State<AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<AppEntry> with WidgetsBindingObserver {
+  bool _isReady = false;
+  String? _error;
+  bool _didPreload = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      AudioManager().pauseBackgroundMusic();
+    } else if (state == AppLifecycleState.resumed) {
+      AudioManager().resumeBackgroundMusic();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didPreload) {
+      _didPreload = true;
+      _preloadAssetsAndAudio();
+    }
+  }
+
+  Future<void> _preloadAssetsAndAudio() async {
+    try {
+      // Logo ve diğer önemli asset'leri önceden yükle
+      await precacheImage(const AssetImage('assets/images/logo.png'), context);
+      // Sesleri ve müziği başlatmadan önce preload
+      await AudioManager().initialize();
+      // Gerekirse başka asset'ler de eklenebilir
+      setState(() {
+        _isReady = true;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Yükleme sırasında hata oluştu: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: Colors.brown.shade800,
+        body: Center(
+          child: Text(_error!, style: const TextStyle(color: Colors.white, fontSize: 18)),
+        ),
+      );
+    }
+    if (!_isReady) {
+      return const SplashScreen();
+    }
+    // Yükleme tamamlandıktan sonra HomeScreen'e yönlendir
+    return const HomeScreen();
   }
 }

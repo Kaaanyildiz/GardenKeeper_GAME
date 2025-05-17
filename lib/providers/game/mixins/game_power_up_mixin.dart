@@ -35,11 +35,8 @@ mixin GamePowerUpMixin on GameState, GameAudioMixin {
 
   // --- MOLE STATE ---
   // Bu değişkenler ve fonksiyonlar, köstebeklerin görünürlüğü ve tipi için gereklidir
-  List<bool> get moleVisible =>throw UnimplementedError('moleVisible getter GameProvider veya üst sınıfta override edilmeli');
-  List<bool> get moleHit => throw UnimplementedError('moleHit getter GameProvider veya üst sınıfta override edilmeli');
-  List<dynamic> get moleTypes => throw UnimplementedError('moleTypes getter GameProvider veya üst sınıfta override edilmeli');
-  void setMoleVisible(int index, bool value) => throw UnimplementedError('setMoleVisible fonksiyonu GameProvider veya üst sınıfta override edilmeli');
-  void setMoleType(int index, dynamic type) => throw UnimplementedError('setMoleType fonksiyonu GameProvider veya üst sınıfta override edilmeli');
+  // Artık zincir GameState'e ulaşacağı için burada UnimplementedError fırlatmaya gerek yok!
+  // Bu getter/setter'lar tamamen kaldırılmalı, zincir GameState'e ulaşacak
 
   // Güçlendirme yönetimi
   void spawnPowerUp() {

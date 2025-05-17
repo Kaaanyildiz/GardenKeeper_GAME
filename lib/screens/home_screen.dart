@@ -87,22 +87,25 @@ class HomeScreen extends StatelessWidget {
                         
                         SizedBox(height: maxHeight * 0.02), // 0.04'ten 0.02'ye düşürdüm
                         
-                        // Yüksek skoru göster
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: maxWidth * 0.05,
-                            vertical: maxHeight * 0.01,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.brown.shade700.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Text(
-                            'YÜKSEK SKOR: ${gameProvider.highScore}',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 20, // 18/22'den 16/20'ye düşürdüm
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                        // Yüksek skoru göster (Selector ile optimize)
+                        Selector<GameProvider, int>(
+                          selector: (_, provider) => provider.highScore,
+                          builder: (_, highScore, __) => Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: maxWidth * 0.05,
+                              vertical: maxHeight * 0.01,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.brown.shade700.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Text(
+                              'YÜKSEK SKOR: $highScore',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 16 : 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -148,6 +151,7 @@ class HomeScreen extends StatelessWidget {
                               // Başlat butonu - yeni mod seçimi ekranına yönlendirildi
                               GestureDetector(
                                 onTap: () {
+                                  gameProvider.fullResetGameState(); // Ana menüden oyun başlatılırken state'i tam sıfırla
                                   gameProvider.playButtonSound();
                                   Navigator.push(
                                     context, 

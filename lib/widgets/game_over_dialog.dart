@@ -15,15 +15,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 class GameOverDialog extends StatefulWidget {
   final int score;
   final int highScore;
-  final VoidCallback onRestart;
-  final VoidCallback onHome;
 
   const GameOverDialog({
     super.key,
     required this.score,
     required this.highScore,
-    required this.onRestart,
-    required this.onHome,
   });
 
   @override
@@ -250,7 +246,9 @@ class _GameOverDialogState extends State<GameOverDialog> with TickerProviderStat
                     children: [
                       // Ana Menü butonu
                       ElevatedButton(
-                        onPressed: widget.onHome,
+                        onPressed: () {
+                          Navigator.of(context, rootNavigator: true).pop('home');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.brown.shade700,
                           padding: EdgeInsets.all(isSmallScreen ? 12 : 15),
@@ -281,7 +279,9 @@ class _GameOverDialogState extends State<GameOverDialog> with TickerProviderStat
                       
                       // Tekrar Oyna butonu
                       ElevatedButton(
-                        onPressed: widget.onRestart,
+                        onPressed: () {
+                          Navigator.of(context, rootNavigator: true).pop('restart');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green.shade700,
                           padding: EdgeInsets.all(isSmallScreen ? 12 : 15),

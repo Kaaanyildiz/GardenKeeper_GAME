@@ -15,148 +15,117 @@ class AudioManager {
   factory AudioManager() => _instance;
   
   late AudioPlayer _musicPlayer;
-  late AudioPlayer _soundPlayer;
-  late AudioCache _audioCache;
+  final Map<String, List<AudioPlayer>> _soundPools = {};
+  final Map<String, int> _poolIndex = {};
   bool _isMusicEnabled = true;
   bool _isSoundEnabled = true;
   double _musicVolume = 1.0;
   double _soundVolume = 1.0;
   bool _isInitialized = false;
+  
+  static const int _poolSize = 3; // Her ses için havuzda bulunacak player sayısı
 
   AudioManager._internal() {
     initialize();
   }
+
   Future<void> initialize() async {
     if (_isInitialized) return;
     
     _musicPlayer = AudioPlayer();
-    _soundPlayer = AudioPlayer();
-    _audioCache = AudioCache();
-    
-    // Başlangıç ayarlarını yap
     await _musicPlayer.setReleaseMode(ReleaseMode.loop);
-    await _soundPlayer.setVolume(_soundVolume);
     await _musicPlayer.setVolume(_musicVolume);
     
-    // Ses dosyalarını yükle
-    await _loadSounds();
+    // Tüm ses tipleri için player havuzlarını oluştur
+    await _setupSoundPool('hit_normal', 'audio/hit_normal.wav');
+    await _setupSoundPool('hit_golden', 'audio/hit_golden.mp3');
+    await _setupSoundPool('hit_healing', 'audio/hit_healing.mp3');
+    await _setupSoundPool('hit_tough', 'audio/hit_tough.mp3');
+    await _setupSoundPool('hit_speedy', 'audio/hit_speedy.wav');
+    await _setupSoundPool('button', 'audio/button.wav');
+    await _setupSoundPool('miss', 'audio/miss.wav');
+    await _setupSoundPool('power_up', 'audio/power_up.wav');
+    await _setupSoundPool('combo', 'audio/combo.mp3');
+    await _setupSoundPool('game_over', 'audio/game_over.mp3');
     
-    // Müziği başlat (eğer aktifse)
     if (_isMusicEnabled) {
       await playBackgroundMusic();
     }
     
     _isInitialized = true;
   }
-  Future<void> _loadSounds() async {
+
+  Future<void> _setupSoundPool(String soundId, String assetPath) async {
+    _soundPools[soundId] = [];
+    _poolIndex[soundId] = 0;
+    print('[DEBUG][AudioManager] Sound pool setup: id=$soundId, asset=$assetPath');
+    for (int i = 0; i < _poolSize; i++) {
+      final player = AudioPlayer();
+      await player.setVolume(_soundVolume);
+      _soundPools[soundId]!.add(player);
+    }
+  }
+
+  AudioPlayer _getNextPlayer(String soundId) {
+    if (!_soundPools.containsKey(soundId)) {
+      throw Exception('Sound pool not found: $soundId');
+    }
+    final pool = _soundPools[soundId]!;
+    final index = _poolIndex[soundId]!;
+    // Sıradaki indekse geç
+    _poolIndex[soundId] = (index + 1) % _poolSize;
+    print('[DEBUG][AudioManager] getNextPlayer: soundId=$soundId, index=$index');
+    return pool[index];
+  }
+
+  Future<void> _playSound(String soundId, String assetPath) async {
+    if (!_isSoundEnabled) return;
     try {
-      final files = [
-        'audio/hit_normal.wav',
-        'audio/hit_golden.mp3',
-        'audio/hit_healing.mp3',
-        'audio/hit_tough.mp3',
-        'audio/button.wav',
-        'audio/miss.wav',
-        'audio/power_up.wav',
-        'audio/combo.mp3',
-        'audio/game_over.mp3',
-        'audio/background_music.mp3'
-      ];
-      
-      // Her dosyayı tek tek dene
-      for (var file in files) {
-        try {
-          await _audioCache.load(file);
-          print('$file başarıyla yüklendi'); // Debug için log
-        } catch (e) {
-          print('$file yüklenirken hata: $e');
-        }
-      }
+      final player = _getNextPlayer(soundId);
+      // await player.stop(); // GECİKMEYİ AZALTMAK İÇİN KALDIRILDI
+      print('[DEBUG][AudioManager] Playing sound: id=$soundId, asset=$assetPath');
+      await player.play(AssetSource(assetPath));
     } catch (e) {
-      print('Ses dosyaları yüklenirken hata oluştu: $e');
+      print('$soundId sesi çalınırken hata oluştu: $e');
     }
   }
 
   Future<void> playHitSound(MoleType type) async {
     if (!_isSoundEnabled) return;
-    try {
-      var fileName = type.toString().split('.').last.toLowerCase();
-      var extension = fileName == 'normal' ? 'wav' : 'mp3';
-      await _soundPlayer.play(AssetSource('assets/audio/hit_$fileName.$extension'));
-      await _soundPlayer.setVolume(_soundVolume);
-    } catch (e) {
-      print('Hit sesi çalınırken hata oluştu: $e');
-    }
+    final fileName = type.toString().split('.').last.toLowerCase();
+    final extension = fileName == 'normal' || fileName == 'speedy' ? 'wav' : 'mp3';
+    await _playSound('hit_$fileName', 'audio/hit_$fileName.$extension');
   }
+
   Future<void> playMissSound() async {
-    if (!_isSoundEnabled) return;
-    try {
-      await _soundPlayer.play(AssetSource('assets/audio/miss.wav'));
-      await _soundPlayer.setVolume(_soundVolume);
-    } catch (e) {
-      print('Miss sesi çalınırken hata oluştu: $e');
-    }
+    await _playSound('miss', 'audio/miss.wav');
   }
 
   Future<void> playGameOverSound() async {
-    if (!_isSoundEnabled) return;
-    try {
-      await _soundPlayer.play(AssetSource('assets/audio/game_over.mp3'));
-      await _soundPlayer.setVolume(_soundVolume);
-    } catch (e) {
-      print('Game over sesi çalınırken hata oluştu: $e');
-    }
+    await _playSound('game_over', 'audio/game_over.mp3');
   }
 
   Future<void> playButtonSound() async {
-    if (!_isSoundEnabled) return;
-    try {
-      await _soundPlayer.play(AssetSource('assets/audio/button.wav'));
-      await _soundPlayer.setVolume(_soundVolume);
-    } catch (e) {
-      print('Button sesi çalınırken hata oluştu: $e');
-    }
+    await _playSound('button', 'audio/button.wav');
   }
 
   Future<void> playPowerUpSound() async {
-    if (!_isSoundEnabled) return;
-    try {
-      await _soundPlayer.play(AssetSource('assets/audio/power_up.wav'));
-      await _soundPlayer.setVolume(_soundVolume);
-    } catch (e) {
-      print('Power up sesi çalınırken hata oluştu: $e');
-    }
+    await _playSound('power_up', 'audio/power_up.wav');
   }
 
   Future<void> playComboSound() async {
-    if (!_isSoundEnabled) return;
-    try {
-      await _soundPlayer.play(AssetSource('assets/audio/combo.mp3'));
-      await _soundPlayer.setVolume(_soundVolume);
-    } catch (e) {
-      print('Combo sesi çalınırken hata oluştu: $e');
-    }
+    await _playSound('combo', 'audio/combo.mp3');
   }
+
   Future<void> playBackgroundMusic() async {
     if (!_isMusicEnabled) return;
     try {
-      await _musicPlayer.stop(); // Önceki müziği durdur
-      await _musicPlayer.setReleaseMode(ReleaseMode.loop); // Tekrar ayarla
-      await _musicPlayer.setSource(AssetSource('audio/background_music.mp3')); // Önce source'u ayarla
+      await _musicPlayer.stop();
+      await _musicPlayer.setSource(AssetSource('audio/background_music.mp3'));
+      await _musicPlayer.resume();
       await _musicPlayer.setVolume(_musicVolume);
-      await _musicPlayer.resume(); // Müziği başlat
-      print('Arkaplan müziği başlatıldı'); // Debug için log
     } catch (e) {
-      print('Arkaplan müziği çalınırken hata oluştu: $e');
-      print('Hata detayı: ${e.toString()}'); // Daha detaylı hata mesajı
-    }
-  }
-
-  Future<void> pauseBackgroundMusic() async {
-    try {
-      await _musicPlayer.pause();
-    } catch (e) {
-      print('Müzik duraklatılırken hata oluştu: $e');
+      print('Müzik başlatılırken hata oluştu: $e');
     }
   }
 
@@ -165,6 +134,14 @@ class AudioManager {
       await _musicPlayer.stop();
     } catch (e) {
       print('Müzik durdurulurken hata oluştu: $e');
+    }
+  }
+
+  Future<void> pauseBackgroundMusic() async {
+    try {
+      await _musicPlayer.pause();
+    } catch (e) {
+      print('Müzik duraklatılırken hata oluştu: $e');
     }
   }
 
@@ -181,7 +158,12 @@ class AudioManager {
   Future<void> setSoundEnabled(bool enabled) async {
     _isSoundEnabled = enabled;
     if (!enabled) {
-      await _soundPlayer.stop();
+      // Tüm aktif sesleri durdur
+      for (var pool in _soundPools.values) {
+        for (var player in pool) {
+          await player.stop();
+        }
+      }
     }
   }
 
@@ -196,7 +178,12 @@ class AudioManager {
 
   Future<void> setSoundVolume(double volume) async {
     _soundVolume = volume;
-    await _soundPlayer.setVolume(volume);
+    // Tüm ses çalıcıların sesini güncelle
+    for (var pool in _soundPools.values) {
+      for (var player in pool) {
+        await player.setVolume(volume);
+      }
+    }
   }
 
   Future<void> setMusicVolume(double volume) async {
@@ -206,6 +193,13 @@ class AudioManager {
 
   Future<void> dispose() async {
     await _musicPlayer.dispose();
-    await _soundPlayer.dispose();
+    // Tüm ses çalıcıları temizle
+    for (var pool in _soundPools.values) {
+      for (var player in pool) {
+        await player.dispose();
+      }
+    }
+    _soundPools.clear();
+    _poolIndex.clear();
   }
 }

@@ -9,6 +9,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:kostebekvurma/providers/game/enums/mole_type.dart';
+import 'package:tuple/tuple.dart';
 import '../providers/game/enums/game_mode.dart';
 import '../providers/game/enums/power_up_type.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +21,6 @@ import '../widgets/game_over_dialog.dart';
 import '../widgets/power_up_widget.dart';
 import '../widgets/game_messages_overlay.dart';
 import '../widgets/level_progress_widget.dart';
-import '../widgets/level_up_animation.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -32,7 +33,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // GameProvider referansını sınıf düzeyinde saklayalım
   late GameProvider _gameProvider;
   bool _dialogShowing = false;
-  
+  // Oyun sonu dialogunun kesinlikle sadece bir kez açılması için provider tabanlı kontrol
+
   // Mod değişimlerinde kullanılacak animasyon kontrolcüsü
   late AnimationController _modeTransitionController;
   
@@ -66,39 +68,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     @override
   void initState() {
     super.initState();
-    
     // Provider referansını başlangıçta al ve sakla
     _gameProvider = Provider.of<GameProvider>(context, listen: false);
-    
+    // Tüm state güncellemelerini ve oyunu başlatmayı build sonrası frame'e ertele
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _gameProvider.fullResetGameState();
+      _gameProvider.startGame();
+      _gameProvider.checkDailyTasks();
+      _modeTransitionController.forward();
+    });
     // Mod değişim animasyonu için controller
     _modeTransitionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    
-    // Oyunu otomatik olarak başlat
-    Future.delayed(Duration.zero, () {
-      if (mounted) {
-        _gameProvider.startGame();
-        // Günlük görevleri kontrol et
-        _gameProvider.checkDailyTasks();
-        // Mod geçiş animasyonunu başlat
-        _modeTransitionController.forward();
-      }
-    });
-
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-
     _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _shakeController,
         curve: Curves.easeInOut,
       ),
     );
-
     _shakeAnimation.addListener(() {
       if (mounted) {
         setState(() {
@@ -110,45 +103,32 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         });
       }
     });
-
-    // GameScreen'e GlobalKey ata
-    // Navigator.pushReplacement ile navigation yapılmamalı!
-    // Bu kod kaldırıldı. Oyun ekranı doğrudan açılmalı.
+    // HATALI NAVIGATION KALDIRILDI
+    // GameScreen'e GlobalKey ata ve navigation işlemi kaldırıldı.
   }
 
   @override
   void dispose() {
     // Animasyon controller'ını dispose et
     _modeTransitionController.dispose();
-    
-    // Saklanan referansı kullan, context üzerinden erişme
-    // Oyunu güvenli bir şekilde bitirmek için Future.microtask kullanıyoruz
+    // DİKKAT: dispose içinde context ile Navigator kullanmak güvenli değildir, kaldırıldı!
     if (_gameProvider.isGameActive) {
       Future.microtask(() {
         _gameProvider.endGame();
       });
     }
     _shakeController.dispose();
+    // Oyun sonu dialog state'ini provider'da sıfırla
+    _gameProvider.setGameOverDialogShown(false);
     super.dispose();
   }
 
   // Güvenli geri dönüş fonksiyonu
   void _safeNavigateBack() {
     try {
-      if (_gameProvider.isGameActive) {
-        // Önce oyunu bitir ve sonra Future.microtask ile navigate et
-        _gameProvider.endGame();
-        Future.microtask(() {
-          if (mounted) {
-            _gameProvider.resetGameForHomeScreen(); // Oyun durumunu temizle
-            Navigator.pop(context);
-          }
-        });
-      } else {
-        // Oyun aktif değilse bile durumu temizle
-        _gameProvider.resetGameForHomeScreen();
-        Navigator.pop(context);
-      }
+      // Oyundan çıkarken state'i tam sıfırla
+      _gameProvider.fullResetGameState();
+      Navigator.pop(context);
     } catch (e) {
       // Herhangi bir hata durumunda güvenli çıkış
       print('Oyundan çıkış hatası: $e');
@@ -158,69 +138,60 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Oyunu yeniden başlat
-  void _restartGame() {
-    if (mounted) {
-      // Dialog gösterim bayrağını sıfırla
-      setState(() {
-        _dialogShowing = false;
-      });
-      
-      // Oyunu tamamen sıfırla ve yeniden başlat
-      _gameProvider.endGame();
-      Future.microtask(() {
-        if (mounted) {
-          _gameProvider.startGame();
-        }
-      });
-    }
-  }
-
-  // Ana menüye dön
-  void _goToHome() {
-    if (mounted) {
-      // Dialog gösterim bayrağını sıfırla
-      setState(() {
-        _dialogShowing = false;
-      });
-      
-      // Önce oyunu tamamen sıfırla
-      _gameProvider.resetGame();
-      
-      // Ana menüye dön
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-    }
-  }
-
   // Oyun sonu dialogunu göster
-  void _showGameOverDialog() {
-    if (mounted && !_dialogShowing) {
+  Future<void> _showGameOverDialog() async {
+    if (mounted && !_dialogShowing && !_gameProvider.gameOverDialogShown) {
       setState(() {
         _dialogShowing = true;
       });
-      
-      showDialog(
+      _gameProvider.setGameOverDialogShown(true);
+      final result = await showDialog<String>(
         context: context,
         barrierDismissible: false,
+        useRootNavigator: true,
         builder: (dialogContext) => GameOverDialog(
           score: _gameProvider.score,
           highScore: _gameProvider.highScore,
-          onRestart: () {
-            // Dialog'u kapat
-            Navigator.of(dialogContext).pop();
-            // Oyunu yeniden başlat
-            _restartGame();
-          },
-          onHome: () {
-            // Dialog'u kapat
-            Navigator.of(dialogContext).pop();
-            // Ana menüye dön
-            _goToHome();
-          },
         ),
       );
+      if (!mounted) return;
+      setState(() {
+        _dialogShowing = false;
+      });
+      if (result == 'home') {
+        _goToHomeAfterDialog();
+      } else if (result == 'restart') {
+        _restartGameAfterDialog();
+      }
     }
   }
+
+  // Ana menüye dön (dialog sonrası)
+  void _goToHomeAfterDialog() {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _gameProvider.resetGame();
+        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/', (route) => false);
+      });
+    }
+  }
+
+  // Oyunu yeniden başlat (dialog sonrası)
+  void _restartGameAfterDialog() {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _gameProvider.endGame();
+        _gameProvider.startGame();
+      });
+    }
+  }
+
+  // --- ESKİ KODLARIN TEMİZLİĞİ ---
+  // Eski _showGameOverDialog, _goToHome, _restartGame fonksiyonlarını ve
+  // dialog parametreli eski GameOverDialog çağrılarını kaldırdık.
+  // Yeni _showGameOverDialog fonksiyonu zaten yukarıda tanımlı.
+  // GameOverDialog çağrısı artık sadece score ve highScore parametresi ile yapılacak.
+  // --- ESKİ KODLARIN TEMİZLİĞİ ---
 
   @override
   Widget build(BuildContext context) {
@@ -245,26 +216,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         !gameProvider.isGameActive && gameProvider.lives <= 0 && !_dialogShowing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showGameOverDialog();
-      });
-    }
-    
-    // Seviye atlama animasyonu
-    if (gameProvider.pendingLevelUp) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => LevelUpAnimation(
-            level: gameProvider.pendingLevel,
-            title: 'Yeni Seviye!',
-            coins: gameProvider.pendingCoins,
-            unlockedItems: gameProvider.pendingUnlockedItems,
-            onComplete: () {
-              Navigator.of(context).pop();
-              gameProvider.clearPendingLevelUp();
-            },
-          ),
-        );
       });
     }
     
@@ -384,40 +335,44 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             _buildGameStatusIndicator(gameProvider, isSmallScreen, size),
                             
                             // Skor
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isSmallScreen ? 12 : 20, 
-                                vertical: isSmallScreen ? 6 : 10
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.brown.shade700,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(77),
-                                    spreadRadius: 1,
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Image.asset(
-                                    'assets/images/star.png',
-                                    width: isSmallScreen ? 18 : 24,
-                                    height: isSmallScreen ? 18 : 24,
-                                  ),
-                                  SizedBox(width: isSmallScreen ? 4 : 8),
-                                  Text(
-                                    '${gameProvider.score}',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: isSmallScreen ? 16 : 20,
-                                      fontWeight: FontWeight.bold,
+                            // Skor göstergesi (Selector ile optimize)
+                            Selector<GameProvider, int>(
+                              selector: (_, provider) => provider.score,
+                              builder: (_, score, __) => Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 12 : 20, 
+                                  vertical: isSmallScreen ? 6 : 10
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.brown.shade700,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(77),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 3),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/star.png',
+                                      width: isSmallScreen ? 18 : 24,
+                                      height: isSmallScreen ? 18 : 24,
+                                    ),
+                                    SizedBox(width: isSmallScreen ? 4 : 8),
+                                    Text(
+                                      '$score',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 16 : 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -541,19 +496,33 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                           mainAxisSpacing: 10,
                                         ),
                                         itemCount: 9, // 3x3 grid
-                                        itemBuilder: (context, index) {                                        return MoleHole(
-                                            index: index,
-                                            isVisible: gameProvider.moleVisible[index],
-                                            isHit: gameProvider.moleHit[index],
-                                            moleType: gameProvider.moleTypes[index], // Köstebek türü
-                                            onTap: () {
-                                              // Köstebeğe vur
-                                              gameProvider.hitMole(index);
+                                        itemBuilder: (context, index) {
+                                          return Selector<GameProvider, Tuple5<bool, bool, MoleType, bool, PowerUpType?>>(
+                                            selector: (context, provider) => Tuple5(
+                                              provider.moleVisible[index],
+                                              provider.moleHit[index],
+                                              provider.moleTypes[index],
+                                              provider.pendingPowerUpIndex == index,
+                                              provider.pendingPowerUpIndex == index ? provider.pendingPowerUpType : null,
+                                            ),
+                                            builder: (context, tuple, child) {
+                                              final isVisible = tuple.item1;
+                                              final isHit = tuple.item2;
+                                              final moleType = tuple.item3;
+                                              final isPowerUp = tuple.item4;
+                                              final powerUpType = tuple.item5;
+                                              return MoleHole(
+                                                index: index,
+                                                isVisible: isVisible,
+                                                isHit: isHit,
+                                                moleType: moleType,
+                                                onTap: () {
+                                                  Provider.of<GameProvider>(context, listen: false).hitMole(index);
+                                                },
+                                                isPowerUp: isPowerUp,
+                                                powerUpType: powerUpType,
+                                              );
                                             },
-                                            // Güçlendirme sistemi desteği
-                                            isPowerUp: gameProvider.pendingPowerUpIndex == index,
-                                            powerUpType: gameProvider.pendingPowerUpIndex == index ? 
-                                                        gameProvider.pendingPowerUpType : null,
                                           );
                                         },
                                       );
