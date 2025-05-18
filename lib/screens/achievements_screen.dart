@@ -12,6 +12,7 @@ import '../providers/game/models/achievement.dart' as achievement;
 import '../providers/game/enums/achievement_category.dart';
 import 'package:provider/provider.dart';
 import '../providers/game/game_provider.dart';
+import '../widgets/level_progress_bar.dart';
 
 // Çakışmayı önlemek için alias kullanıyoruz
 typedef Achievement = achievement.Achievement;
@@ -27,12 +28,20 @@ class AchievementsScreen extends StatelessWidget {
           length: 4,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text(
-                'Başarımlar',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              toolbarHeight: 90,
+              title: Column(
+                children: [
+                  // Modern Seviye Barı (yeni)
+                  const LevelProgressBar(),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Başarımlar',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               centerTitle: true,
               backgroundColor: Colors.brown.shade900,

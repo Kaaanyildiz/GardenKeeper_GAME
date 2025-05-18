@@ -13,6 +13,8 @@ import '../providers/game/enums/mole_type.dart';
 import '../providers/game/enums/power_up_type.dart';
 import 'dart:math';
 import '../utils/audio_manager.dart';
+import 'package:provider/provider.dart';
+import '../providers/game/game_provider.dart';
 
 // Parçacık efekti için yeni sınıf
 class ParticleEffect extends StatelessWidget {
@@ -107,6 +109,11 @@ class _MoleHoleState extends State<MoleHole> {
           });
         }
       });
+    } else if (widget.isVisible && widget.isPowerUp && widget.powerUpType != null) {
+      // Güçlendirme toplandıysa GameProvider'a bildir
+      final provider = Provider.of<GameProvider>(context, listen: false);
+      provider.onPowerUpCollected();
+      widget.onTap();
     } else {
       // Boşa tıklama: sadece çekiç animasyonu göster, ses ve onTap yok
       setState(() {

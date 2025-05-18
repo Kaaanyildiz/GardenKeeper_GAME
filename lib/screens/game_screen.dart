@@ -20,7 +20,8 @@ import '../widgets/mole_hole.dart';
 import '../widgets/game_over_dialog.dart';
 import '../widgets/power_up_widget.dart';
 import '../widgets/game_messages_overlay.dart';
-import '../widgets/level_progress_widget.dart';
+import '../widgets/level_progress_bar.dart';
+import '../widgets/level_up_animation.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -33,6 +34,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // GameProvider referansını sınıf düzeyinde saklayalım
   late GameProvider _gameProvider;
   bool _dialogShowing = false;
+  bool _levelUpDialogShowing = false;
   // Oyun sonu dialogunun kesinlikle sadece bir kez açılması için provider tabanlı kontrol
 
   // Mod değişimlerinde kullanılacak animasyon kontrolcüsü
@@ -219,6 +221,32 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     }
     
+    // Seviye atlama popup'ı (modern animasyonlu)
+    if (gameProvider.pendingLevelUp && !_levelUpDialogShowing) {
+      _levelUpDialogShowing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => LevelUpAnimation(
+            level: gameProvider.pendingLevel,
+            title: 'Yeni Seviye!',
+            coins: gameProvider.pendingCoins,
+            unlockedItems: gameProvider.pendingUnlockedItems,
+            onComplete: () {
+              Navigator.of(ctx).pop();
+            },
+          ),
+        );
+        if (mounted) {
+          gameProvider.clearPendingLevelUp();
+          setState(() {
+            _levelUpDialogShowing = false;
+          });
+        }
+      });
+    }
+    
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
@@ -278,16 +306,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
-                      
-                      // Seviye ilerleme widget'ı
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: const LevelProgressWidget(),
-                      ),
-                      
+                      // Modern Seviye Barı (yeni)
+                      const LevelProgressBar(),
                       // Üst bilgi paneli
                       Container(
                         padding: EdgeInsets.all(isSmallScreen ? 8.0 : 16.0),

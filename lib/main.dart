@@ -15,6 +15,7 @@ import 'screens/game_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/achievements_screen.dart'; // Yeni eklendi
 import 'screens/mode_selection_screen.dart'; // Yeni eklendi
+import 'screens/profile_screen.dart'; // Yeni eklendi
 import 'providers/game/game_provider.dart';
 import 'widgets/splash_screen.dart';
 import 'utils/audio_manager.dart';
@@ -64,6 +65,7 @@ class MyApp extends StatelessWidget {
         '/settings': (context) => const SettingsScreen(),
         '/achievements': (context) => const AchievementsScreen(),
         '/mode_selection': (context) => const ModeSelectionScreen(),
+        '/profile': (context) => const ProfileScreen(), // Profil ekranı rotası
       },
     );
   }

@@ -12,6 +12,7 @@ import 'package:kostebekvurma/providers/game/enums/game_mode.dart';
 import 'package:provider/provider.dart';
 import '../providers/game/game_provider.dart';
 import 'game_screen.dart';
+import '../widgets/level_progress_bar.dart';
 
 class ModeSelectionScreen extends StatelessWidget {
   const ModeSelectionScreen({super.key});
@@ -33,6 +34,8 @@ class ModeSelectionScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
+              // Modern Seviye Barı (yeni)
+              const LevelProgressBar(),
               // Üst Panel - Başlık ve Geri Butonu
               Padding(
                 padding: EdgeInsets.all(size.width * 0.04),

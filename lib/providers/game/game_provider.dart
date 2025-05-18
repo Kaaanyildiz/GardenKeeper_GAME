@@ -53,6 +53,8 @@ class GameProvider extends MixinInterface with
   // Initialize
   GameProvider() {
     loadAchievements();
+    loadTasks();
+    checkDailyTasks();
   }
 
   // Game state methods
@@ -67,7 +69,45 @@ class GameProvider extends MixinInterface with
 
   void endGame() {
     super.endGame();
-    // Diğer işlemler (skor, achievement vs.) burada kalabilir
+    // --- GÜNLÜK GÖREV EVENTLERİ ---
+    // 1. Skor görevi (örn. reachScore)
+    if (dailyTasks.containsKey('reach_2000_score')) {
+      final score = this.score;
+      if (score >= 2000) {
+        updateTaskProgress('reach_2000_score', score);
+      }
+    }
+    // 2. Hayatta kalma süresi (örn. surviveTime)
+    if (dailyTasks.containsKey('survive_120')) {
+      final playedSeconds = (this as dynamic).playedSeconds ?? 0;
+      if (playedSeconds >= 120) {
+        updateTaskProgress('survive_120', playedSeconds);
+      }
+    }
+    // 3. Mükemmel oyun (perfectGame) - hiç köstebek kaçmazsa
+    if (dailyTasks.containsKey('perfect_game')) {
+      if (missedMoles == 0) {
+        updateTaskProgress('perfect_game', 1);
+      }
+    }
+    // 4. Oyun kazanma/görevleri (winGames)
+    if (dailyTasks.containsKey('play_3_classic') && currentGameMode == GameMode.classic) {
+      updateTaskProgress('play_3_classic', (taskProgresses['play_3_classic'] ?? 0) + 1);
+    }
+    if (dailyTasks.containsKey('play_2_timeattack') && currentGameMode == GameMode.timeAttack) {
+      updateTaskProgress('play_2_timeattack', (taskProgresses['play_2_timeattack'] ?? 0) + 1);
+    }
+    if (dailyTasks.containsKey('play_5_any')) {
+      updateTaskProgress('play_5_any', (taskProgresses['play_5_any'] ?? 0) + 1);
+    }
+    // XP kazanma görevi (örn. earn_500_xp)
+    if (dailyTasks.containsKey('earn_500_xp')) {
+      final xp = this.xp;
+      if (xp >= 500) {
+        updateTaskProgress('earn_500_xp', xp);
+      }
+    }
+    // --- GÜNLÜK GÖREV EVENTLERİ SONU ---
     notifyListeners();
   }
 
@@ -170,7 +210,36 @@ class GameProvider extends MixinInterface with
   @override
   void hitMole(int index) {
     super.hitMole(index);
-    // Seviye, achievement, mesaj gibi ek işlemler burada kalabilir
+    // Günlük görev ilerlemesi
+    final moleType = moleTypes[index];
+    // 1. Genel köstebek vurma
+    if (dailyTasks.containsKey('hit_50')) {
+      updateTaskProgress('hit_50', (taskProgresses['hit_50'] ?? 0) + 1);
+    }
+    // 2. Altın köstebek vurma
+    if (moleType.toString().contains('golden') && dailyTasks.containsKey('hit_5_golden')) {
+      updateTaskProgress('hit_5_golden', (taskProgresses['hit_5_golden'] ?? 0) + 1);
+    }
+    // 3. Kombo görevi
+    if (dailyTasks.containsKey('combo_10')) {
+      updateTaskProgress('combo_10', (taskProgresses['combo_10'] ?? 0) + 1);
+    }
+    // 4. Güçlendirme toplama (power-up)
+    // (Eğer power-up toplama event'i başka yerdeyse oraya da eklenmeli)
+    // 5. Hayatta kalma süresi, skor, oyun kazanma gibi görevler oyun sonunda güncellenmeli
+    notifyListeners();
+  }
+
+  // Güçlendirme toplama event'i (günlük görev ilerlemesi için)
+  void onPowerUpCollected() {
+    // collectPowerUps görevi
+    if (dailyTasks.containsKey('collect_10_powerups')) {
+      updateTaskProgress('collect_10_powerups', (taskProgresses['collect_10_powerups'] ?? 0) + 1);
+    }
+    // useBoosts görevi (varsa)
+    if (dailyTasks.containsKey('use_boosts')) {
+      updateTaskProgress('use_boosts', (taskProgresses['use_boosts'] ?? 0) + 1);
+    }
     notifyListeners();
   }
 

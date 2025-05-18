@@ -8,6 +8,7 @@ import '../enums/task_type.dart';
 import '../enums/game_mode.dart';
 import '../enums/message_type.dart';
 import 'interfaces/mixin_interface.dart';
+import '../../../widgets/achievement_animation.dart';
 
 mixin GameTaskMixin on MixinInterface {
   // Game state properties
@@ -52,73 +53,146 @@ mixin GameTaskMixin on MixinInterface {
     notifyListeners();
   }
   
-  // Yeni günlük görevler oluştur
+  // Yeni günlük görevler oluştur (gelişmiş görev havuzu)
   Future<void> _generateDailyTasks() async {
     _dailyTasks.clear();
     _taskProgresses.clear();
-    
-    // Temel görevler
-    _addTask(
+    final now = DateTime.now();
+    final tomorrow = now.add(const Duration(days: 1));
+
+    // Görev havuzu
+    final List<DailyTask> pool = [
       DailyTask(
-        id: 'daily_hits',
+        id: 'hit_50',
         title: '50 Köstebek Vur',
-        description: 'Bugün 50 köstebek vur',
+        description: 'Bugün 50 köstebek vur.',
         requiredCount: 50,
         rewardPoints: 100,
         rewardCoins: 50,
         type: TaskType.hitMoles,
-        createdAt: DateTime.now(),
-        expiresAt: DateTime.now().add(const Duration(days: 1)),
+        createdAt: now,
+        expiresAt: tomorrow,
       ),
-    );
-    
-    _addTask(
       DailyTask(
-        id: 'daily_golden',
+        id: 'hit_5_golden',
         title: '5 Altın Köstebek',
-        description: 'Bugün 5 altın köstebek vur',
+        description: 'Bugün 5 altın köstebek vur.',
         requiredCount: 5,
         rewardPoints: 200,
         rewardCoins: 100,
         type: TaskType.hitGoldenMoles,
-        createdAt: DateTime.now(),
-        expiresAt: DateTime.now().add(const Duration(days: 1)),
+        createdAt: now,
+        expiresAt: tomorrow,
       ),
-    );
-    
-    // Rastgele mod görevi
-    final randomMode = GameMode.values[DateTime.now().day % GameMode.values.length];
-    _addTask(
       DailyTask(
-        id: 'daily_mode',
-        title: '${_getModeTitle(randomMode)} Oyna',
-        description: '${_getModeTitle(randomMode)} modunda 3 dakika geçir',
-        requiredCount: 180, // 3 dakika = 180 saniye
+        id: 'reach_2000_score',
+        title: '2000 Puan Yap',
+        description: 'Tek bir oyunda 2000 puana ulaş.',
+        requiredCount: 2000,
         rewardPoints: 150,
         rewardCoins: 75,
-        type: TaskType.playTimeInMode,
-        gameMode: randomMode,
-        createdAt: DateTime.now(),
-        expiresAt: DateTime.now().add(const Duration(days: 1)),
+        type: TaskType.reachScore,
+        createdAt: now,
+        expiresAt: tomorrow,
       ),
-    );
-    
-    // Zorluk seviyesine göre ekstra görev
-    if (difficulty == 'hard') {
-      _addTask(
-        DailyTask(
-          id: 'daily_perfect',
-          title: 'Mükemmel Oyun',
-          description: 'Hiç köstebek kaçırmadan bir oyun tamamla',
-          requiredCount: 1,
-          rewardPoints: 300,
-          rewardCoins: 150,
-          type: TaskType.perfectGame,
-          difficulty: 'hard',
-          createdAt: DateTime.now(),
-          expiresAt: DateTime.now().add(const Duration(days: 1)),
-        ),
-      );
+      DailyTask(
+        id: 'combo_10',
+        title: '10 Kombo Yap',
+        description: 'Bir oyunda 10 kombo yap.',
+        requiredCount: 10,
+        rewardPoints: 120,
+        rewardCoins: 60,
+        type: TaskType.achieveCombo,
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'play_3_classic',
+        title: 'Klasik Modda 3 Oyun Oyna',
+        description: 'Klasik modda 3 oyun tamamla.',
+        requiredCount: 3,
+        rewardPoints: 100,
+        rewardCoins: 50,
+        type: TaskType.winGames,
+        gameMode: GameMode.classic,
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'play_2_timeattack',
+        title: 'Zaman Yarışı Modu',
+        description: 'Zaman Yarışı modunda 2 oyun tamamla.',
+        requiredCount: 2,
+        rewardPoints: 120,
+        rewardCoins: 60,
+        type: TaskType.winGames,
+        gameMode: GameMode.timeAttack,
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'collect_10_powerups',
+        title: '10 Güçlendirme Topla',
+        description: 'Bugün 10 güçlendirme topla.',
+        requiredCount: 10,
+        rewardPoints: 100,
+        rewardCoins: 50,
+        type: TaskType.collectPowerUps,
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'perfect_game',
+        title: 'Mükemmel Oyun',
+        description: 'Hiç köstebek kaçırmadan bir oyun tamamla.',
+        requiredCount: 1,
+        rewardPoints: 300,
+        rewardCoins: 150,
+        type: TaskType.perfectGame,
+        difficulty: 'hard',
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'survive_120',
+        title: '120 Saniye Hayatta Kal',
+        description: 'Bir oyunda 120 saniye hayatta kal.',
+        requiredCount: 120,
+        rewardPoints: 180,
+        rewardCoins: 90,
+        type: TaskType.surviveTime,
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'play_5_any',
+        title: '5 Oyun Oyna',
+        description: 'Bugün toplam 5 oyun oyna.',
+        requiredCount: 5,
+        rewardPoints: 100,
+        rewardCoins: 50,
+        type: TaskType.winGames,
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+      DailyTask(
+        id: 'earn_500_xp',
+        title: '500 XP Kazan',
+        description: 'Bugün toplam 500 XP kazan.',
+        requiredCount: 500,
+        rewardPoints: 120,
+        rewardCoins: 60,
+        type: TaskType.reachScore, // XP için özel bir TaskType eklenebilir, şimdilik reachScore kullanıldı
+        createdAt: now,
+        expiresAt: tomorrow,
+      ),
+    ];
+
+    // Her gün 3 farklı görev seç (çeşitlilik için karıştır)
+    pool.shuffle();
+    final selected = pool.take(3).toList();
+    for (final task in selected) {
+      _addTask(task);
     }
   }
   
@@ -153,11 +227,26 @@ mixin GameTaskMixin on MixinInterface {
     // Ödülleri ver
     addScore(task.rewardPoints);
     addCoins(task.rewardCoins);
-    
+
     // Bildirim göster
     showTask(
       'Görev Tamamlandı: ${task.title}\n+${task.rewardPoints} puan, +${task.rewardCoins} altın!'
     );
+
+    // Kutlama animasyonu (popup) tetikle
+    // Eğer context erişimi varsa, popup göster
+    final context = (this as dynamic).gameScreenKey?.currentContext;
+    if (context != null) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        // showAchievementPopup fonksiyonu widgets/achievement_animation.dart içinde mevcut
+        showAchievementPopup(
+          context,
+          task.title,
+          task.description + '\n+${task.rewardPoints} XP, +${task.rewardCoins} altın',
+          isTask: true,
+        );
+      });
+    }
   }
   
   // Süresi dolan görevleri temizle
@@ -226,20 +315,6 @@ mixin GameTaskMixin on MixinInterface {
   // İki tarihin aynı gün olup olmadığını kontrol et
   bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-  
-  // Oyun modu başlığını al
-  String _getModeTitle(GameMode mode) {
-    switch (mode) {
-      case GameMode.classic:
-        return 'Klasik Mod';
-      case GameMode.timeAttack:
-        return 'Zaman Yarışı';
-      case GameMode.survival:
-        return 'Hayatta Kalma';
-      case GameMode.special:
-        return 'Özel Mod';
-    }
   }
   
   void addTask(Task task) {

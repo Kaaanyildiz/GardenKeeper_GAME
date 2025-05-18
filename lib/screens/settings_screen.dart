@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../providers/game/game_provider.dart';
+import '../widgets/level_progress_bar.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -34,6 +35,8 @@ class SettingsScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
+              // Modern Seviye Barı (yeni)
+              const LevelProgressBar(),
               // Üst panel
               Padding(
                 padding: EdgeInsets.all(size.width * 0.04),
